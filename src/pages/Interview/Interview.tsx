@@ -10,10 +10,10 @@ export function Interview() {
 
   // 임시 데이터
   const interviews = [
-    { id: 1, repoName: 'ecommerce-platform', questionCount: 5, createdAt: '2026.01.15' },
-    { id: 2, repoName: 'react-optimization', questionCount: 3, createdAt: '2026.01.10' },
-    { id: 3, repoName: 'graphql-api', questionCount: 4, createdAt: '2025.12.28' },
-    { id: 4, repoName: 'ml-pipeline', questionCount: 5, createdAt: '2025.12.20' },
+    { id: 1, repoName: '쇼핑몰-클론코딩', questionCount: 5, createdAt: '2026.01.15' },
+    { id: 2, repoName: '리액트-렌더링-최적화', questionCount: 3, createdAt: '2026.01.10' },
+    { id: 3, repoName: 'graphql-연습', questionCount: 4, createdAt: '2025.12.28' },
+    { id: 4, repoName: '간단-추천모델', questionCount: 5, createdAt: '2025.12.20' },
   ];
 
   const filteredInterviews = interviews.filter((interview) => {

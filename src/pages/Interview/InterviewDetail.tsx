@@ -14,11 +14,41 @@ interface Question {
 
 export function InterviewDetail() {
   const [questions, setQuestions] = useState<Question[]>([
-    { id: 1, question: 'E-commerce 플랫폼에서 사용한 주요 기술 스택에 대해 설명해주세요.', answer: '', feedback: '', isGeneratingFeedback: false },
-    { id: 2, question: 'JWT 기반 인증 시스템을 구현할 때 고려한 보안 요소는 무엇인가요?', answer: '', feedback: '', isGeneratingFeedback: false },
-    { id: 3, question: 'PostgreSQL을 선택한 이유와 데이터베이스 최적화 전략을 말씀해주세요.', answer: '', feedback: '', isGeneratingFeedback: false },
-    { id: 4, question: 'Stripe API를 통합하면서 겪었던 어려움과 해결 방법을 설명해주세요.', answer: '', feedback: '', isGeneratingFeedback: false },
-    { id: 5, question: 'MVC 패턴을 적용한 이유와 레이어드 아키텍처의 장점을 설명해주세요.', answer: '', feedback: '', isGeneratingFeedback: false },
+    {
+      id: 1,
+      question: '쇼핑몰 프로젝트에서 구현한 기능 중 가장 어려웠던 부분은 무엇이었나요?',
+      answer: '',
+      feedback: '',
+      isGeneratingFeedback: false,
+    },
+    {
+      id: 2,
+      question: 'JWT 인증 구현하면서 겪었던 문제와 해결 방법을 설명해주세요.',
+      answer: '',
+      feedback: '',
+      isGeneratingFeedback: false,
+    },
+    {
+      id: 3,
+      question: '로그인 상태를 유지하기 위해 어떤 방식으로 처리하셨나요?',
+      answer: '',
+      feedback: '',
+      isGeneratingFeedback: false,
+    },
+    {
+      id: 4,
+      question: 'API 요청/응답 구조를 설계할 때 어떤 기준으로 나누셨나요?',
+      answer: '',
+      feedback: '',
+      isGeneratingFeedback: false,
+    },
+    {
+      id: 5,
+      question: '프로젝트 진행하면서 코드 구조를 개선했던 경험이 있다면 설명해주세요.',
+      answer: '',
+      feedback: '',
+      isGeneratingFeedback: false,
+    },
   ]);
 
   const [openQuestions, setOpenQuestions] = useState<Set<number>>(new Set());
@@ -41,7 +71,7 @@ export function InterviewDetail() {
   };
 
   const saveAnswer = (questionId: number) => {
-    setQuestions(questions.map(q => 
+    setQuestions(questions.map(q =>
       q.id === questionId ? { ...q, answer: answerInput } : q
     ));
     setEditingAnswer(null);
@@ -55,7 +85,7 @@ export function InterviewDetail() {
 
   const generateFeedback = (questionId: number) => {
     // 생성 중 상태 설정
-    setQuestions(questions.map(q => 
+    setQuestions(questions.map(q =>
       q.id === questionId ? { ...q, isGeneratingFeedback: true } : q
     ));
 
@@ -69,7 +99,7 @@ export function InterviewDetail() {
 
 전반적으로 매우 우수한 답변입니다. 실무 경험이 잘 드러나고 있습니다.`;
 
-      setQuestions(questions.map(q => 
+      setQuestions(questions.map(q =>
         q.id === questionId ? { ...q, feedback: mockFeedback, isGeneratingFeedback: false } : q
       ));
     }, 2000);
@@ -87,14 +117,14 @@ export function InterviewDetail() {
             면접
           </Link>
           <ChevronRight className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-600">ecommerce-platform</span>
+          <span className="text-gray-600">쇼핑몰-클론코딩</span>
         </div>
 
         <Card className="p-8 bg-white border border-sky-100 shadow-sm">
           {/* 헤더 */}
           <div className="mb-8 pb-6 border-b border-gray-200">
             <h1 className="text-2xl text-gray-900 mb-2">
-              면접 질문 / ecommerce-platform
+              면접 질문 / 쇼핑몰-클론코딩
             </h1>
             <p className="text-sm text-gray-500">
               생성일: 2026.01.15 • 질문 {questions.length}개
@@ -129,7 +159,7 @@ export function InterviewDetail() {
                     {/* 답변 섹션 */}
                     <div className="mb-4">
                       <h3 className="text-sm font-medium text-gray-700 mb-4">답변</h3>
-                      
+
                       {editingAnswer === q.id ? (
                         // 답변 편집 모드
                         <div className="space-y-4">
@@ -156,11 +186,10 @@ export function InterviewDetail() {
                               <Button
                                 onClick={() => saveAnswer(q.id)}
                                 disabled={answerInput.length === 0}
-                                className={`px-4 py-2 text-sm ${
-                                  answerInput.length > 0
+                                className={`px-4 py-2 text-sm ${answerInput.length > 0
                                     ? 'bg-sky-600 text-white hover:bg-sky-700'
                                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                }`}
+                                  }`}
                               >
                                 저장하기
                               </Button>

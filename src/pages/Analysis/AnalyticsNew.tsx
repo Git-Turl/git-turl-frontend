@@ -10,14 +10,14 @@ export function AnalyticsNew() {
 
   // 자세한 레포지토리 목록
   const repositories = [
-    { name: 'ecommerce-platform', description: 'Full-stack e-commerce solution', language: 'TypeScript' },
-    { name: 'react-optimization', description: 'React performance patterns', language: 'JavaScript' },
-    { name: 'graphql-api', description: 'GraphQL API server', language: 'TypeScript' },
-    { name: 'k8s-deploy', description: 'Kubernetes deployment configs', language: 'YAML' },
-    { name: 'ml-pipeline', description: 'Machine learning pipeline', language: 'Python' },
-    { name: 'chat-app', description: 'Real-time chat application', language: 'JavaScript' },
-    { name: 'portfolio-site', description: 'Personal portfolio website', language: 'TypeScript' },
-    { name: 'todo-app', description: 'Simple todo application', language: 'JavaScript' },
+    { name: '쇼핑몰-클론코딩', description: '기본 CRUD 중심 쇼핑몰 구현', language: 'TypeScript' },
+    { name: '리액트-렌더링-최적화', description: '렌더링 최적화 실습 코드', language: 'JavaScript' },
+    { name: 'graphql-연습', description: '간단한 GraphQL API 서버', language: 'TypeScript' },
+    { name: 'docker-배포-연습', description: 'Docker + EC2 배포 테스트', language: 'YAML' },
+    { name: '간단-추천모델', description: 'Python 추천 알고리즘 연습', language: 'Python' },
+    { name: '채팅앱-토이프로젝트', description: '실시간 채팅 구현', language: 'JavaScript' },
+    { name: '포트폴리오-사이트', description: 'React로 만든 개인 포트폴리오', language: 'TypeScript' },
+    { name: 'todo-app', description: '로컬스토리지 기반 Todo 앱', language: 'JavaScript' },
   ];
 
   const handleGoBack = () => {
@@ -70,11 +70,10 @@ export function AnalyticsNew() {
                 <button
                   key={repo.name}
                   onClick={() => setSelectedRepo(repo.name)}
-                  className={`relative p-5 border-2 rounded-xl text-left transition-all ${
-                    selectedRepo === repo.name
+                  className={`relative p-5 border-2 rounded-xl text-left transition-all ${selectedRepo === repo.name
                       ? 'border-sky-500 bg-sky-50 shadow-md'
                       : 'border-gray-200 hover:border-sky-300 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   {/* 선택된 체크 마크 */}
                   {selectedRepo === repo.name && (
@@ -94,11 +93,10 @@ export function AnalyticsNew() {
                       </h3>
                       <p className="text-sm text-gray-600 mb-2">{repo.description}</p>
                       <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${
-                          selectedRepo === repo.name
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${selectedRepo === repo.name
                             ? 'bg-sky-100 text-sky-700'
                             : 'bg-gray-100 text-gray-600'
-                        }`}>
+                          }`}>
                           {repo.language}
                         </span>
                       </div>
@@ -132,11 +130,10 @@ export function AnalyticsNew() {
               <Button
                 onClick={handleGenerate}
                 disabled={!selectedRepo}
-                className={`px-8 py-2 ${
-                  selectedRepo
+                className={`px-8 py-2 ${selectedRepo
                     ? 'bg-sky-600 text-white hover:bg-sky-700 shadow-sm'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 생성하기
               </Button>

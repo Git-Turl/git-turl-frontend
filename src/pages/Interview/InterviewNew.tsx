@@ -14,12 +14,36 @@ export function InterviewNew() {
 
   // 요약 리스트 임시 데이터
   const summaries = [
-    { name: 'ecommerce-platform', description: 'E-commerce 플랫폼 분석', createdAt: '2026.01.15' },
-    { name: 'react-optimization', description: 'React 성능 최적화', createdAt: '2026.01.10' },
-    { name: 'graphql-api', description: 'GraphQL API 서버', createdAt: '2025.12.28' },
-    { name: 'k8s-deploy', description: 'Kubernetes 배포 구성', createdAt: '2025.12.25' },
-    { name: 'ml-pipeline', description: 'ML 파이프라인', createdAt: '2025.12.20' },
-    { name: 'chat-app', description: '실시간 채팅 애플리케이션', createdAt: '2025.12.15' },
+    {
+      name: '쇼핑몰-클론코딩',
+      description: 'JWT 인증 흐름과 장바구니 상태 관리 구현 과정 정리',
+      createdAt: '2026.01.15',
+    },
+    {
+      name: '리액트-렌더링-최적화',
+      description: 'memo/useCallback 적용 전후 렌더링 비교 정리',
+      createdAt: '2026.01.10',
+    },
+    {
+      name: 'graphql-연습',
+      description: 'REST와 GraphQL 차이 및 Resolver 구조 정리',
+      createdAt: '2025.12.28',
+    },
+    {
+      name: 'docker-배포-연습',
+      description: 'Docker 이미지 생성부터 EC2 배포까지 과정 정리',
+      createdAt: '2025.12.25',
+    },
+    {
+      name: '간단-추천모델',
+      description: '협업 필터링 기본 개념 및 구현 과정 정리',
+      createdAt: '2025.12.20',
+    },
+    {
+      name: '채팅앱-토이프로젝트',
+      description: 'Socket 통신 흐름 및 이벤트 구조 정리',
+      createdAt: '2025.12.15',
+    },
   ];
 
   const filteredSummaries = summaries.filter((summary) => {
@@ -83,21 +107,19 @@ export function InterviewNew() {
               <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setFilterMode('all')}
-                  className={`px-4 py-2 rounded-md text-sm transition-all ${
-                    filterMode === 'all'
+                  className={`px-4 py-2 rounded-md text-sm transition-all ${filterMode === 'all'
                       ? 'bg-white text-sky-700 shadow-sm font-medium'
                       : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   전체
                 </button>
                 <button
                   onClick={() => setFilterMode('date')}
-                  className={`px-4 py-2 rounded-md text-sm transition-all ${
-                    filterMode === 'date'
+                  className={`px-4 py-2 rounded-md text-sm transition-all ${filterMode === 'date'
                       ? 'bg-white text-sky-700 shadow-sm font-medium'
                       : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   기간별 조회
                 </button>
@@ -149,11 +171,10 @@ export function InterviewNew() {
                 <button
                   key={summary.name}
                   onClick={() => setSelectedSummary(summary.name)}
-                  className={`relative p-5 border-2 rounded-xl text-left transition-all ${
-                    selectedSummary === summary.name
+                  className={`relative p-5 border-2 rounded-xl text-left transition-all ${selectedSummary === summary.name
                       ? 'border-sky-500 bg-sky-50 shadow-md'
                       : 'border-gray-200 hover:border-sky-300 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   {selectedSummary === summary.name && (
                     <div className="absolute top-4 right-4 w-6 h-6 rounded-full bg-sky-600 flex items-center justify-center">
@@ -186,11 +207,10 @@ export function InterviewNew() {
                     <button
                       key={num}
                       onClick={() => setQuestionCount(num)}
-                      className={`w-12 h-12 rounded-lg border-2 transition-all ${
-                        questionCount === num
+                      className={`w-12 h-12 rounded-lg border-2 transition-all ${questionCount === num
                           ? 'border-sky-600 bg-sky-600 text-white font-medium shadow-md'
                           : 'border-gray-300 bg-white text-gray-700 hover:border-sky-400'
-                      }`}
+                        }`}
                     >
                       {num}
                     </button>
@@ -226,11 +246,10 @@ export function InterviewNew() {
               <Button
                 onClick={handleGenerate}
                 disabled={!selectedSummary}
-                className={`px-8 py-2 ${
-                  selectedSummary
+                className={`px-8 py-2 ${selectedSummary
                     ? 'bg-sky-600 text-white hover:bg-sky-700 shadow-sm'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 생성하기
               </Button>

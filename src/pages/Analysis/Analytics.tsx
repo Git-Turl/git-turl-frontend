@@ -22,43 +22,43 @@ export function Analytics() {
   const analyses: RepositoryAnalysis[] = [
     {
       id: '1',
-      repoName: 'ecommerce-platform',
-      description: 'Full-stack e-commerce solution with Node.js and PostgreSQL',
+      repoName: '쇼핑몰-클론코딩',
+      description: 'React + Node.js로 간단한 쇼핑몰 기능 구현 (로그인, 장바구니, 결제 흐름 연습)',
       createdAt: '2026-03-15',
       isPublic: true,
     },
     {
       id: '2',
-      repoName: 'react-optimization',
-      description: 'React performance optimization techniques and patterns',
+      repoName: '리액트-렌더링-최적화',
+      description: '불필요한 리렌더링 줄이기 위한 memo, useCallback 실습',
       createdAt: '2026-03-10',
       isPublic: false,
     },
     {
       id: '3',
-      repoName: 'graphql-api',
-      description: 'GraphQL API server with Apollo and TypeScript',
+      repoName: 'graphql-연습',
+      description: 'Apollo Server로 간단한 GraphQL API 구성해보기',
       createdAt: '2026-03-05',
       isPublic: true,
     },
     {
       id: '4',
-      repoName: 'k8s-deploy',
-      description: 'Kubernetes deployment strategies and configurations',
+      repoName: 'docker-배포-연습',
+      description: 'Docker로 Node 서버 컨테이너화하고 EC2에 배포 연습',
       createdAt: '2026-03-01',
       isPublic: false,
     },
     {
       id: '5',
-      repoName: 'ml-pipeline',
-      description: 'Machine learning training pipeline with Python',
+      repoName: '간단-추천모델',
+      description: 'Python으로 영화 추천 로직 간단히 구현 (협업 필터링 기초)',
       createdAt: '2026-02-28',
       isPublic: true,
     },
     {
       id: '6',
-      repoName: 'chat-app',
-      description: 'Real-time chat application with WebSocket',
+      repoName: '채팅앱-토이프로젝트',
+      description: 'Socket.io로 실시간 채팅 기능 구현해보기',
       createdAt: '2026-02-25',
       isPublic: true,
     },
@@ -67,21 +67,21 @@ export function Analytics() {
   const filteredAnalyses = filterMode === 'all'
     ? analyses
     : analyses.filter((analysis) => {
-        if (!startDate && !endDate) return true;
+      if (!startDate && !endDate) return true;
 
-        const analysisDate = new Date(analysis.createdAt);
-        const start = startDate ? new Date(startDate) : null;
-        const end = endDate ? new Date(endDate) : null;
+      const analysisDate = new Date(analysis.createdAt);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
 
-        if (start && end) {
-          return analysisDate >= start && analysisDate <= end;
-        } else if (start) {
-          return analysisDate >= start;
-        } else if (end) {
-          return analysisDate <= end;
-        }
-        return true;
-      });
+      if (start && end) {
+        return analysisDate >= start && analysisDate <= end;
+      } else if (start) {
+        return analysisDate >= start;
+      } else if (end) {
+        return analysisDate <= end;
+      }
+      return true;
+    });
 
   const handleNewAnalysis = () => {
     navigate('/analytics/new');
@@ -108,27 +108,25 @@ export function Analytics() {
           {/* 섹션 헤더 */}
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-xl text-gray-900">깃허브 요약 내역</h2>
-            
+
             {/* 필터 모드 토글 */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setFilterMode('all')}
-                  className={`px-4 py-2 rounded-md text-sm transition-all ${
-                    filterMode === 'all'
+                  className={`px-4 py-2 rounded-md text-sm transition-all ${filterMode === 'all'
                       ? 'bg-white text-sky-700 shadow-sm font-medium'
                       : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   전체
                 </button>
                 <button
                   onClick={() => setFilterMode('date')}
-                  className={`px-4 py-2 rounded-md text-sm transition-all ${
-                    filterMode === 'date'
+                  className={`px-4 py-2 rounded-md text-sm transition-all ${filterMode === 'date'
                       ? 'bg-white text-sky-700 shadow-sm font-medium'
                       : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   기간별 조회
                 </button>
