@@ -4,7 +4,10 @@ import { Analytics } from '../pages/Analysis/Analytics';
 import { AnalyticsNew } from '../pages/Analysis/AnalyticsNew';
 import { AnalyticsLoading } from '../pages/Analysis/AnalyticsLoading';
 import { AnalyticsDetail } from '../pages/Analysis/AnalyticsDetail';
-
+import { Interview } from '../pages/Interview/Interview';
+import { InterviewNew } from '../pages/Interview/InterviewNew';
+import { InterviewLoading } from '../pages/Interview/InterviewLoading';
+import { InterviewDetail } from '../pages/Interview/InterviewDetail';
 
 export const router = createBrowserRouter([
   {
@@ -26,6 +29,22 @@ export const router = createBrowserRouter([
       {
         path: 'analytics/detail/:id',
         Component: AnalyticsDetail,
+      },
+      {
+        path: 'interview',
+        Component: Interview,
+      },
+      {
+        path: 'interview/new',
+        Component: InterviewNew,
+      },
+      {
+        path: 'interview/loading',
+        Component: InterviewLoading,
+      },
+      {
+        path: 'interview/detail/:id',
+        Component: InterviewDetail,
       },
       {
         path: 'notifications',
