@@ -12,64 +12,51 @@ export function AnalyticsDetail() {
 
   // Mock data
   const analysisData = {
-    repoName: 'ecommerce-platform',
+    repoName: '쇼핑몰-클론코딩',
     createdAt: '2026.01.01',
-    content: `# E-Commerce Platform 분석 리포트
+    content: `# 레포지토리 분석 결과
 
 ## 프로젝트 개요
-이 프로젝트는 Node.js와 Express를 기반으로 한 풀스택 전자상거래 플랫폼입니다.
+Node.js와 Express 기반의 쇼핑몰 형태 프로젝트로 보입니다. 
+사용자 인증, 상품 조회, 장바구니 기능이 구현되어 있는 것으로 추정됩니다.
 
-## 주요 기능
-- 사용자 인증 및 권한 관리
-- 상품 카탈로그 관리
-- 장바구니 및 주문 처리
-- 결제 게이트웨이 통합
-- 관리자 대시보드
+## 주요 기능 (추정)
+- JWT 기반 로그인/회원가입
+- 상품 목록 조회 API
+- 장바구니 추가/삭제 기능
+- 간단한 주문 처리 로직
+
+※ 일부 기능은 코드 구조 기준으로 추정된 내용입니다.
 
 ## 기술 스택
-- **Backend**: Node.js, Express.js
-- **Database**: PostgreSQL
-- **Authentication**: JWT
-- **Payment**: Stripe API
+- Backend: Node.js, Express
+- Database: PostgreSQL (ORM 사용 여부는 확인 필요)
+- Authentication: JWT
 
-## 아키텍처 분석
-이 프로젝트는 MVC 패턴을 따르고 있으며, 레이어드 아키텍처를 통해 관심사를 명확히 분리하고 있습니다.
+## 코드 구조 분석
+프로젝트는 다음과 같은 구조를 따르는 것으로 보입니다.
 
-### 디렉토리 구조
-\`\`\`
-/src
-  /controllers  - 비즈니스 로직 처리
-  /models       - 데이터베이스 모델
-  /routes       - API 라우팅
-  /middleware   - 인증, 에러 핸들링
-  /services     - 외부 서비스 통합
-\`\`\`
+- controllers: 요청 처리 로직
+- routes: API 라우팅
+- middleware: 인증 및 에러 처리
+- services: 비즈니스 로직 분리 시도
 
-## 코드 품질
-- ESLint를 통한 코드 스타일 관리
-- Jest를 활용한 단위 테스트 (커버리지 85%)
-- 타입 안정성을 위한 TypeScript 사용
+전반적으로 MVC 패턴을 참고하여 구성한 것으로 보이나, 일부 로직이 controller에 집중된 부분도 확인됩니다.
 
-## 개선 제안사항
-1. API 문서화 (Swagger/OpenAPI)
-2. 로깅 시스템 강화
-3. 캐싱 전략 도입 (Redis)
-4. CI/CD 파이프라인 구축
+## 확인된 개선 포인트
+- 에러 처리 로직이 일관되지 않은 부분이 있습니다.
+- API 응답 형식이 통일되지 않은 것으로 보입니다.
+- 환경변수 관리(.env)가 일부 하드코딩되어 있을 가능성이 있습니다.
 
-## 보안 고려사항
-- HTTPS 통신 필수
-- SQL Injection 방어
-- XSS 공격 방지
-- Rate Limiting 적용
+## 추가로 개선해볼 수 있는 부분
+- API 응답 포맷 통일 (success/data/error 구조)
+- 서비스 레이어 분리 강화
+- 간단한 테스트 코드 추가
 
-## 성능 최적화
-- 데이터베이스 인덱싱
-- 이미지 최적화 및 CDN 활용
-- API 응답 캐싱
-- 페이지네이션 구현
-
-## 결론
-전반적으로 잘 구조화된 프로젝트이며, 확장 가능한 아키텍처를 가지고 있습니다. 제안된 개선사항들을 적용하면 더욱 견고한 시스템이 될 것으로 예상됩니다.`,
+## 총평
+기본적인 CRUD 흐름은 잘 구현되어 있으며, 
+실제 서비스 구조를 연습하기 위한 프로젝트로 적절해 보입니다. 
+다만 코드 구조를 조금 더 정리하면 유지보수성이 좋아질 것으로 보입니다.`
   };
 
   const handleDownloadPDF = () => {
@@ -112,14 +99,12 @@ export function AnalyticsDetail() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsPublic(!isPublic)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    isPublic ? 'bg-green-500' : 'bg-gray-300'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPublic ? 'bg-green-500' : 'bg-gray-300'
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
-                      isPublic ? 'translate-x-6' : 'translate-x-1'
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${isPublic ? 'translate-x-6' : 'translate-x-1'
+                      }`}
                   />
                 </button>
                 <span className={`text-sm font-medium ${isPublic ? 'text-green-700' : 'text-gray-700'}`}>
