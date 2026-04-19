@@ -284,8 +284,10 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: Setti
 
           {/* 알림 설정 탭 */}
           {activeTab === 'notification' && (
-            <div className="space-y-6">
+            <div className="flex flex-col" style={{ height: 'calc(90vh - 80px)' }}>
               <h3 className="text-2xl text-gray-900 mb-6">알림 설정</h3>
+
+              <div className="space-y-6">
 
               {/* 댓글 알림 */}
               <div className="flex items-center justify-between p-5 bg-gray-50 rounded-lg">
@@ -311,6 +313,7 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: Setti
                     }`}
                   />
                 </button>
+              </div>
               </div>
             </div>
           )}
