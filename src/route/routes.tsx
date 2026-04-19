@@ -1,5 +1,8 @@
 import { createBrowserRouter } from 'react-router';
 import { Layout } from '../components/layout/Layout';
+import { MyPage } from '../pages/MyPage/MyPage';
+import { MyPosts } from '../pages/MyPage/MyPosts';
+import { MyComments } from '../pages/MyPage/MyComments';
 import { Analytics } from '../pages/Analysis/Analytics';
 import { AnalyticsNew } from '../pages/Analysis/AnalyticsNew';
 import { AnalyticsLoading } from '../pages/Analysis/AnalyticsLoading';
@@ -14,6 +17,18 @@ export const router = createBrowserRouter([
     path: '/',
     Component: Layout,
     children: [
+      {
+        index: true,
+        Component: MyPage,
+      },
+      {
+        path: 'community',
+        Component: MyPosts,
+      },
+      {
+        path: 'my-comments',
+        Component: MyComments,
+      },
       {
         path: 'analytics',
         Component: Analytics,
