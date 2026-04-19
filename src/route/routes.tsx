@@ -1,5 +1,9 @@
 import { createBrowserRouter } from 'react-router';
 import { Layout } from '../components/layout/Layout';
+import { Analytics } from '../pages/Analysis/Analytics';
+import { AnalyticsNew } from '../pages/Analysis/AnalyticsNew';
+import { AnalyticsLoading } from '../pages/Analysis/AnalyticsLoading';
+import { AnalyticsDetail } from '../pages/Analysis/AnalyticsDetail';
 
 
 export const router = createBrowserRouter([
@@ -7,6 +11,22 @@ export const router = createBrowserRouter([
     path: '/',
     Component: Layout,
     children: [
+      {
+        path: 'analytics',
+        Component: Analytics,
+      },
+      {
+        path: 'analytics/new',
+        Component: AnalyticsNew,
+      },
+      {
+        path: 'analytics/loading',
+        Component: AnalyticsLoading,
+      },
+      {
+        path: 'analytics/detail/:id',
+        Component: AnalyticsDetail,
+      },
       {
         path: 'notifications',
         element: <div className="p-8"><h1 className="text-2xl">Notifications Page</h1></div>,
