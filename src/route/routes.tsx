@@ -1,22 +1,55 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, Navigate } from 'react-router';
 import { Layout } from '../components/layout/Layout';
+
 import { MyPage } from '../pages/MyPage/MyPage';
 import { MyPosts } from '../pages/MyPage/MyPosts';
 import { MyComments } from '../pages/MyPage/MyComments';
+
 import { Analytics } from '../pages/Analysis/Analytics';
 import { AnalyticsNew } from '../pages/Analysis/AnalyticsNew';
 import { AnalyticsLoading } from '../pages/Analysis/AnalyticsLoading';
 import { AnalyticsDetail } from '../pages/Analysis/AnalyticsDetail';
+
 import { Interview } from '../pages/Interview/Interview';
 import { InterviewNew } from '../pages/Interview/InterviewNew';
 import { InterviewLoading } from '../pages/Interview/InterviewLoading';
 import { InterviewDetail } from '../pages/Interview/InterviewDetail';
 
+import { Onboarding } from '../pages/Onboarding/Onboarding';
+import { Login } from '../pages/Auth/Login';
+import { Loading } from '../pages/Auth/Loading';
+import { SignUp } from '../pages/SignUp/SignUp';
+import { Home } from '../pages/Home/Home';
+
 export const router = createBrowserRouter([
+   {
+    path: '/',
+    element: <Navigate to="/onboarding" replace />,
+  },
+  {
+    path: '/onboarding',
+    Component: Onboarding,
+  },
+  {
+    path: '/login',
+    Component: Login,
+  },
+  {
+    path: '/login/loading',
+    Component: Loading,
+  },
+  {
+    path: '/signup',
+    Component: SignUp,
+  },
   {
     path: '/',
     Component: Layout,
     children: [
+      {
+        path: '/home',
+        Component: Home,
+      },
       {
         index: true,
         Component: MyPage,
