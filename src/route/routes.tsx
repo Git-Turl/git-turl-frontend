@@ -1,70 +1,42 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, Navigate } from 'react-router';
+import { Onboarding } from '../pages/Onboarding/Onboarding';
+import { Login } from '../pages/Auth/Login';
+import { Loading } from '../pages/Auth/Loading';
+import { SignUp } from '../pages/SignUp/SignUp';
+import { Home } from '../pages/Home/Home';
 import { Layout } from '../components/layout/Layout';
-import { MyPage } from '../pages/MyPage/MyPage';
-import { MyPosts } from '../pages/MyPage/MyPosts';
-import { MyComments } from '../pages/MyPage/MyComments';
-import { Analytics } from '../pages/Analysis/Analytics';
-import { AnalyticsNew } from '../pages/Analysis/AnalyticsNew';
-import { AnalyticsLoading } from '../pages/Analysis/AnalyticsLoading';
-import { AnalyticsDetail } from '../pages/Analysis/AnalyticsDetail';
-import { Interview } from '../pages/Interview/Interview';
-import { InterviewNew } from '../pages/Interview/InterviewNew';
-import { InterviewLoading } from '../pages/Interview/InterviewLoading';
-import { InterviewDetail } from '../pages/Interview/InterviewDetail';
 
 export const router = createBrowserRouter([
+  //  접속 시 /onboarding으로 자동 이동
   {
     path: '/',
+    element: <Navigate to="/onboarding" replace />,
+  },
+  // 랜딩 페이지
+  {
+    path: '/onboarding',
+    Component: Onboarding,
+  },
+  // 로그인
+  {
+    path: '/login',
+    Component: Login,
+  },
+  // OAuth 콜백 (토큰 받는 곳)
+  {
+    path: '/login/loading',
+    Component: Loading,
+  },
+  // 프로필 설정
+  {
+    path: '/signup',
+    Component: SignUp,
+  },
+  // 인증 후 페이지: AppSidebar 포함된 Layout 사용
+  {
     Component: Layout,
     children: [
-      {
-        index: true,
-        Component: MyPage,
-      },
-      {
-        path: 'community',
-        Component: MyPosts,
-      },
-      {
-        path: 'my-comments',
-        Component: MyComments,
-      },
-      {
-        path: 'analytics',
-        Component: Analytics,
-      },
-      {
-        path: 'analytics/new',
-        Component: AnalyticsNew,
-      },
-      {
-        path: 'analytics/loading',
-        Component: AnalyticsLoading,
-      },
-      {
-        path: 'analytics/detail/:id',
-        Component: AnalyticsDetail,
-      },
-      {
-        path: 'interview',
-        Component: Interview,
-      },
-      {
-        path: 'interview/new',
-        Component: InterviewNew,
-      },
-      {
-        path: 'interview/loading',
-        Component: InterviewLoading,
-      },
-      {
-        path: 'interview/detail/:id',
-        Component: InterviewDetail,
-      },
-      {
-        path: 'notifications',
-        element: <div className="p-8"><h1 className="text-2xl">Notifications Page</h1></div>,
-      },
+      { path: '/home', Component: Home },
     ],
   },
 ]);
