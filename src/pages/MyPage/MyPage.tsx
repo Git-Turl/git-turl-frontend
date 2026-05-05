@@ -1,15 +1,75 @@
+import { useEffect, useState } from 'react';
 import { ProfileCard } from '../../components/common/ProfileCard';
 import { GitHubCard } from '../../components/common/GitHubCard';
 import { SummaryCarousel } from '../../components/common/SummaryCarousel';
+import { getMyProfile, getProfileImage } from '../../api/member';
+import defaultProfile from '../../assets/img/img_profile.svg';
 
 export function MyPage() {
-  // 프로필 데이터
-  const profileData = {
-    profileImage: 'https://images.unsplash.com/photo-1737575655055-e3967cbefd03?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBkZXZlbG9wZXIlMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzU0OTU1OTF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    nickname: '김개발',
-    githubId: 'developer_kim',
-    techStack: 'backend' as const,
-  };
+  const [profileData, setProfileData] = useState<{
+    profileImage: string;
+    nickname: string;
+    githubId: string;
+    techStack: 'frontend' | 'backend' | 'ai';
+  }>({
+    profileImage: defaultProfile,
+    nickname: '로딩 중...',
+    githubId: '',
+    techStack: 'backend',
+  });
+
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        // 프로필 정보 조회
+        const profileResponse = await getMyProfile();
+        const profile = profileResponse.result;
+
+        // 프로필 이미지 조회
+        let imageUrl = defaultProfile;
+        try {
+          const imageResponse = await getProfileImage();
+          if (imageResponse.result?.profileImage) {
+            imageUrl = imageResponse.result.profileImage;
+          }
+        } catch (imageError) {
+          console.log('프로필 이미지가 없습니다. 기본 이미지를 사용합니다.');
+        }
+
+        // jobType을 techStack으로 변환
+        let techStack: 'frontend' | 'backend' | 'ai' = 'backend';
+        if (profile?.jobType === 'FRONTEND') techStack = 'frontend';
+        else if (profile?.jobType === 'AI') techStack = 'ai';
+
+        setProfileData({
+          profileImage: imageUrl,
+          nickname: profile?.nickname || '사용자',
+          githubId: profile?.githubId || '',
+          techStack,
+        });
+      } catch (error) {
+        console.error('프로필 정보를 불러오는데 실패했습니다:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-12">
+            <div className="text-gray-500">로딩 중...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const githubData = {
     username: 'developer_kim',

@@ -62,7 +62,7 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
       {userProfile && (
         <div className="p-4 border-t border-sky-100">
           <Link
-            to="/"
+            to="/mypage"
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-sky-50 transition-colors"
           >
             <img

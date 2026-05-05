@@ -1,12 +1,55 @@
 import { Outlet } from 'react-router';
+import { useEffect, useState } from 'react';
 import { AppSidebar } from '../common/AppSidebar';
+import { getMyProfile, getProfileImage } from '../../api/member';
+import defaultProfile from '../../assets/img/img_profile.svg';
 
 export function Layout() {
-  const userProfile = {
-    name: '김개발',
-    email: 'dev@example.com',
-    avatar: 'https://images.unsplash.com/photo-1737575655055-e3967cbefd03?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBkZXZlbG9wZXIlMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzU0OTU1OTF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-  };
+  const [userProfile, setUserProfile] = useState<{
+    name: string;
+    email: string;
+    avatar: string;
+  }>({
+    name: '로딩 중...',
+    email: '',
+    avatar: defaultProfile,
+  });
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        // 프로필 정보 조회
+        const profileResponse = await getMyProfile();
+        const profileData = profileResponse.result;
+
+        // 프로필 이미지 조회
+        let imageUrl = defaultProfile;
+        try {
+          const imageResponse = await getProfileImage();
+          if (imageResponse.result?.profileImage) {
+            imageUrl = imageResponse.result.profileImage;
+          }
+        } catch (imageError) {
+          console.log('프로필 이미지가 없습니다. 기본 이미지를 사용합니다.');
+        }
+
+        setUserProfile({
+          name: profileData?.nickname || profileData?.name || '사용자',
+          email: profileData?.email || '',
+          avatar: imageUrl,
+        });
+      } catch (error) {
+        console.error('프로필 정보를 불러오는데 실패했습니다:', error);
+        setUserProfile({
+          name: '사용자',
+          email: '',
+          avatar: defaultProfile,
+        });
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   return (
     <div className="min-h-screen bg-sky-50">
