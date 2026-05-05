@@ -1,31 +1,38 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { Layout } from '../components/layout/Layout';
 
+// 인증 및 온보딩
+import { Onboarding } from '../pages/Onboarding/Onboarding';
+import { Login } from '../pages/Auth/Login';
+import { Loading } from '../pages/Auth/Loading';
+import { SignUp } from '../pages/SignUp/SignUp';
+
+// 메인 페이지
+import { Home } from '../pages/Home/Home';
 import { MyPage } from '../pages/MyPage/MyPage';
 import { MyPosts } from '../pages/MyPage/MyPosts';
 import { MyComments } from '../pages/MyPage/MyComments';
 
+// 분석
 import { Analytics } from '../pages/Analysis/Analytics';
 import { AnalyticsNew } from '../pages/Analysis/AnalyticsNew';
 import { AnalyticsLoading } from '../pages/Analysis/AnalyticsLoading';
 import { AnalyticsDetail } from '../pages/Analysis/AnalyticsDetail';
 
+// 인터뷰
 import { Interview } from '../pages/Interview/Interview';
 import { InterviewNew } from '../pages/Interview/InterviewNew';
 import { InterviewLoading } from '../pages/Interview/InterviewLoading';
 import { InterviewDetail } from '../pages/Interview/InterviewDetail';
 
-import { Onboarding } from '../pages/Onboarding/Onboarding';
-import { Login } from '../pages/Auth/Login';
-import { Loading } from '../pages/Auth/Loading';
-import { SignUp } from '../pages/SignUp/SignUp';
-import { Home } from '../pages/Home/Home';
-
 export const router = createBrowserRouter([
-   {
+  // 루트에서 온보딩으로 리다이렉트
+  {
     path: '/',
     element: <Navigate to="/onboarding" replace />,
   },
+  
+  // 인증 및 온보딩 라우트 (레이아웃 없음)
   {
     path: '/onboarding',
     Component: Onboarding,
@@ -42,18 +49,25 @@ export const router = createBrowserRouter([
     path: '/signup',
     Component: SignUp,
   },
+  
+  // 메인 앱 라우트 (레이아웃 포함)
   {
     path: '/',
     Component: Layout,
     children: [
+      // 홈
       {
-        path: '/home',
+        path: 'home',
         Component: Home,
       },
+      
+      // 마이페이지
       {
-        index: true,
+        path: 'mypage',
         Component: MyPage,
       },
+      
+      // 커뮤니티
       {
         path: 'community',
         Component: MyPosts,
@@ -62,6 +76,8 @@ export const router = createBrowserRouter([
         path: 'my-comments',
         Component: MyComments,
       },
+      
+      // 분석 라우트
       {
         path: 'analytics',
         Component: Analytics,
@@ -78,6 +94,8 @@ export const router = createBrowserRouter([
         path: 'analytics/detail/:id',
         Component: AnalyticsDetail,
       },
+      
+      // 인터뷰 라우트
       {
         path: 'interview',
         Component: Interview,
@@ -94,6 +112,8 @@ export const router = createBrowserRouter([
         path: 'interview/detail/:id',
         Component: InterviewDetail,
       },
+      
+      // 알림
       {
         path: 'notifications',
         element: <div className="p-8"><h1 className="text-2xl">Notifications Page</h1></div>,

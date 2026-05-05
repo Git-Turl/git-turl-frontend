@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { CircleCheck, CircleX, User, Camera } from 'lucide-react';
-import { StackSelectModal } from './StackSelectModal.tsx';
+import { StackSelectModal } from '../StackSelectModal.tsx';
 /*import { updateProfile } from '../../api/member';
 import { fieldToJobType, stacksToEnumList } from '../../utils/stackMapping'; -> cors 문제로 임시 로컬 저장중*/
 
