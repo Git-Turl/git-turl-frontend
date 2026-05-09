@@ -34,8 +34,8 @@ export function Layout() {
         }
 
         setUserProfile({
-          name: profileData?.nickname || profileData?.name || '사용자',
-          email: profileData?.email || '',
+          name: profileData?.nickname || '사용자',
+          email: profileData?.githubId || '',
           avatar: imageUrl,
         });
       } catch (error) {

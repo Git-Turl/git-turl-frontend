@@ -24,14 +24,11 @@ export type ProfileRequest = {
 };
 
 export type MyProfile = {
-  nickname?: string;
-  name?: string;
-  email?: string;
-  githubId?: string;
-  profileImage?: string | null;
-  avatar?: string;
-  jobType?: JobType;
-  techStackList?: TechStack[];
+  nickname: string;
+  profileImage: string;
+  jobType: JobType;
+  githubId: string;
+  techStack: TechStack[];
 };
 
 export type ProfileImageResult = {
