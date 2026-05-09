@@ -18,9 +18,9 @@ export type TechStack =
   | 'ETC';
 
 export type ProfileRequest = {
-  nickname: string;
-  jobType: JobType;
-  techStackList: TechStack[];
+  nickname?: string;
+  jobType?: JobType;
+  techStackList?: TechStack[] | null;
 };
 
 export type MyProfile = {
@@ -53,12 +53,12 @@ export const submitOnboarding = async (
 
 /**
  * 프로필 정보 수정
- * PUT /api/v1/members/me/profile
+ * PATCH /api/v1/members/me/profile
  */
 export const updateProfile = async (
   data: ProfileRequest
 ): Promise<ApiResponse<null>> => {
-  const response = await client.put<ApiResponse<null>>(
+  const response = await client.patch<ApiResponse<null>>(
     '/api/v1/members/me/profile',
     data
   );
