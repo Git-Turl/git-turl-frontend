@@ -80,7 +80,7 @@ export async function fetchAndStoreUserInfo(): Promise<FetchProfileResult> {
     // 프로필 사진 조회 실패는 무시 — name/email은 이미 받았음
   }
 
-  const email = pick(profile, ['email']);
+  const email = pick(profile, ['githubId']); 
   const githubId = pick(profile, [
     'githubId',
     'github_id',
