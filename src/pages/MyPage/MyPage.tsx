@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ProfileCard } from '../../components/common/ProfileCard';
 import { GitHubCard } from '../../components/common/GitHubCard';
 import { SummaryCarousel } from '../../components/common/SummaryCarousel';
-import { getMyProfile, getProfileImage } from '../../api/member';
+import { getMyProfile, getProfileImage, getRepositories } from '../../api/member';
 import defaultProfile from '../../assets/img/img_profile.svg';
 
 export function MyPage() {
@@ -19,6 +19,7 @@ export function MyPage() {
   });
 
   const [loading, setLoading] = useState(true);
+  const [repositories, setRepositories] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -38,6 +39,16 @@ export function MyPage() {
           console.log('프로필 이미지가 없습니다. 기본 이미지를 사용합니다.');
         }
 
+        // 레포지토리 목록 조회
+        try {
+          const repoResponse = await getRepositories();
+          if (repoResponse.isSuccess && repoResponse.result) {
+            setRepositories(repoResponse.result);
+          }
+        } catch (repoError) {
+          console.error('레포지토리 목록 로딩 실패:', repoError);
+        }
+
         // jobType을 techStack으로 변환
         let techStack: 'frontend' | 'backend' | 'ai' = 'backend';
         if (profile?.jobType === 'FRONTEND') techStack = 'frontend';
@@ -49,9 +60,10 @@ export function MyPage() {
           githubId: profile?.githubId || '',
           techStack,
         });
+
+        setLoading(false);
       } catch (error) {
-        console.error('프로필 정보를 불러오는데 실패했습니다:', error);
-      } finally {
+        console.error('프로필 데이터 로딩 실패:', error);
         setLoading(false);
       }
     };
@@ -76,40 +88,15 @@ export function MyPage() {
     githubUrl: 'https://github.com/developer_kim',
   };
 
-  const summaries = [
-    {
-      id: '1',
-      title: '쇼핑몰 클론코딩',
-      repository: 'github.com/developer_kim/ecommerce',
-      date: '2026.03.15',
-      description: 'Node.js와 Express 기반의 쇼핑몰 형태 프로젝트로 보입니다. 로그인, 상품 조회, 장바구니 기능이 구현되어 있는 것으로 추정됩니다.',
-      tags: ['Node.js', 'Express', 'PostgreSQL'],
-    },
-    {
-      id: '2',
-      title: '작업 관리 API',
-      repository: 'github.com/developer_kim/task-api',
-      date: '2026.02.20',
-      description: 'JWT 인증을 사용하는 Todo 관리 API로 보입니다. 기본적인 CRUD 기능과 인증 흐름이 구현된 것으로 확인됩니다.',
-      tags: ['REST API', 'JWT', 'Node.js'],
-    },
-    {
-      id: '3',
-      title: 'Docker 배포 연습',
-      repository: 'github.com/developer_kim/microservices',
-      date: '2026.01.10',
-      description: 'Docker를 활용한 서버 배포 연습용 프로젝트로 보입니다. EC2 환경에서 실행을 시도한 흔적이 확인됩니다.',
-      tags: ['Docker', 'EC2'],
-    },
-    {
-      id: '4',
-      title: 'GraphQL 서버',
-      repository: 'github.com/developer_kim/graphql-server',
-      date: '2025.12.05',
-      description: 'Apollo Server 기반의 GraphQL API 프로젝트로 추정됩니다. 기본적인 Query 및 Mutation 구조가 포함된 것으로 보입니다.',
-      tags: ['GraphQL', 'Apollo', 'TypeScript'],
-    },
-  ];
+  // API에서 받은 레포지토리 데이터를 SummaryCarousel 형식으로 변환
+  const summaries = repositories.map((repo, index) => ({
+    id: String(index + 1),
+    title: repo.name,
+    repository: repo.fullName,
+    date: new Date(repo.updatedAt).toLocaleDateString('ko-KR'),
+    description: repo.description || '설명이 없는 레포지토리입니다.',
+    tags: [], // API에서 태그 정보가 없으므로 빈 배열
+  }));
 
   return (
     <div className="p-8">

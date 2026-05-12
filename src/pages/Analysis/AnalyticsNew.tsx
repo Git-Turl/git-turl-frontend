@@ -1,24 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Check, GitBranch } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { getRepositories } from '../../api/member';
 
 export function AnalyticsNew() {
   const navigate = useNavigate();
   const [selectedRepo, setSelectedRepo] = useState<string>('');
+  const [repositories, setRepositories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // 자세한 레포지토리 목록
-  const repositories = [
-    { name: '쇼핑몰-클론코딩', description: '기본 CRUD 중심 쇼핑몰 구현', language: 'TypeScript' },
-    { name: '리액트-렌더링-최적화', description: '렌더링 최적화 실습 코드', language: 'JavaScript' },
-    { name: 'graphql-연습', description: '간단한 GraphQL API 서버', language: 'TypeScript' },
-    { name: 'docker-배포-연습', description: 'Docker + EC2 배포 테스트', language: 'YAML' },
-    { name: '간단-추천모델', description: 'Python 추천 알고리즘 연습', language: 'Python' },
-    { name: '채팅앱-토이프로젝트', description: '실시간 채팅 구현', language: 'JavaScript' },
-    { name: '포트폴리오-사이트', description: 'React로 만든 개인 포트폴리오', language: 'TypeScript' },
-    { name: 'todo-app', description: '로컬스토리지 기반 Todo 앱', language: 'JavaScript' },
-  ];
+  // 레포지토리 목록 조회
+  useEffect(() => {
+    const fetchRepositories = async () => {
+      try {
+        const response = await getRepositories();
+        if (response.isSuccess && response.result) {
+          setRepositories(response.result);
+        }
+      } catch (error) {
+        console.error('레포지토리 목록 로딩 실패:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRepositories();
+  }, []);
 
   const handleGoBack = () => {
     navigate('/analytics');
@@ -29,6 +38,14 @@ export function AnalyticsNew() {
       navigate('/analytics/loading');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen p-8 bg-[#F0F9FF] flex items-center justify-center">
+        <div className="text-gray-500">레포지토리 목록을 불러오는 중...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-8 bg-[#F0F9FF]">
@@ -68,15 +85,15 @@ export function AnalyticsNew() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               {repositories.map((repo) => (
                 <button
-                  key={repo.name}
-                  onClick={() => setSelectedRepo(repo.name)}
-                  className={`relative p-5 border-2 rounded-xl text-left transition-all ${selectedRepo === repo.name
+                  key={repo.fullName}
+                  onClick={() => setSelectedRepo(repo.fullName)}
+                  className={`relative p-5 border-2 rounded-xl text-left transition-all ${selectedRepo === repo.fullName
                       ? 'border-sky-500 bg-sky-50 shadow-md'
                       : 'border-gray-200 hover:border-sky-300 hover:bg-gray-50'
                     }`}
                 >
                   {/* 선택된 체크 마크 */}
-                  {selectedRepo === repo.name && (
+                  {selectedRepo === repo.fullName && (
                     <div className="absolute top-4 right-4 w-6 h-6 rounded-full bg-sky-600 flex items-center justify-center">
                       <Check className="w-4 h-4 text-white" />
                     </div>
@@ -85,19 +102,19 @@ export function AnalyticsNew() {
                   {/* 레포지토리 정보 */}
                   <div className="flex items-start gap-3">
                     <div className="mt-1">
-                      <GitBranch className={`w-5 h-5 ${selectedRepo === repo.name ? 'text-sky-700' : 'text-gray-400'}`} />
+                      <GitBranch className={`w-5 h-5 ${selectedRepo === repo.fullName ? 'text-sky-700' : 'text-gray-400'}`} />
                     </div>
                     <div className="flex-1">
-                      <h3 className={`font-medium mb-1 ${selectedRepo === repo.name ? 'text-sky-900' : 'text-gray-900'}`}>
+                      <h3 className={`font-medium mb-1 ${selectedRepo === repo.fullName ? 'text-sky-900' : 'text-gray-900'}`}>
                         {repo.name}
                       </h3>
                       <p className="text-sm text-gray-600 mb-2">{repo.description}</p>
                       <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${selectedRepo === repo.name
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${selectedRepo === repo.fullName
                             ? 'bg-sky-100 text-sky-700'
                             : 'bg-gray-100 text-gray-600'
                           }`}>
-                          {repo.language}
+                          {repo.private ? 'Private' : 'Public'}
                         </span>
                       </div>
                     </div>
