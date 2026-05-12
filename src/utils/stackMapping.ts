@@ -5,7 +5,9 @@ export const fieldToJobType = (field: string | null): JobType | null => {
   if (!field) return null;
   const map: Record<string, JobType> = {
     프론트: 'FRONTEND',
+    frontend: 'FRONTEND',
     백엔드: 'BACKEND',
+    backend: 'BACKEND',
     AI: 'AI',
   };
   return map[field] || null;

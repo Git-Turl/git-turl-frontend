@@ -30,7 +30,7 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: Setti
   const [profileImage, setProfileImage] = useState(currentProfile.profileImage);
   const [techStack, setTechStack] = useState(currentProfile.techStack);
   const [preferredStacks, setPreferredStacks] = useState<string[]>(currentProfile.preferredStacks || []);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(currentProfile.notificationsEnabled);
+  const [notificationsEnabled] = useState(currentProfile.notificationsEnabled);
   const [commentNotificationsEnabled, setCommentNotificationsEnabled] = useState(currentProfile.commentNotificationsEnabled);
   const [nicknameChecked, setNicknameChecked] = useState(false);
 

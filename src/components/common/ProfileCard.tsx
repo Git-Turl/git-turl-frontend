@@ -4,6 +4,8 @@ import { Link } from 'react-router';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
 import { SettingsModal } from './SettingsModal';
+import { updateProfile } from '../../api/member';
+import { fieldToJobType, stacksToEnumList } from '../../utils/stackMapping';
 
 interface ProfileCardProps {
   profileImage: string;
@@ -28,10 +30,33 @@ export function ProfileCard({
     commentNotificationsEnabled: true,
   });
 
-  const handleSaveSettings = (data: typeof profileData) => {
-    setProfileData(data);
-    // 실제 앱에서는 백엔드/상태 관리에 저장해야 함
-    console.log('설정 저장:', data);
+  const handleSaveSettings = async (data: typeof profileData) => {
+    try {
+      const jobType = fieldToJobType(data.techStack);
+      if (!jobType) {
+        alert('희망분야 값이 올바르지 않습니다.');
+        return;
+      }
+      
+      const techStackList = stacksToEnumList(data.preferredStacks);
+      
+      const response = await updateProfile({
+        nickname: data.nickname,
+        jobType,
+        techStackList,
+      });
+      
+      if (response.isSuccess) {
+        setProfileData(data);
+        alert('프로필이 성공적으로 수정되었습니다.');
+      } else {
+        alert(response.message || '프로필 수정에 실패했습니다.');
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || '프로필 수정 중 오류가 발생했습니다.';
+      alert(errorMessage);
+      console.error('프로필 수정 실패:', error);
+    }
   };
 
   return (
