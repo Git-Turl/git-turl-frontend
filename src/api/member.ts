@@ -83,6 +83,14 @@ export type Repository = {
   private: boolean;
 };
 
+export type ReportRequest = {
+  fullName: string;
+};
+
+export type ReportResult = {
+  reportId: number;
+};
+
 // ========== API 호출 함수 ==========
 
 /**
@@ -166,6 +174,20 @@ export const updateProfileImage = async (
         'Content-Type': 'multipart/form-data',
       },
     }
+  );
+  return response.data;
+};
+
+/**
+ * 레포지토리 분석본 생성
+ * POST /api/v1/reports
+ */
+export const createReport = async (
+  data: ReportRequest
+): Promise<ApiResponse<ReportResult>> => {
+  const response = await client.post<ApiResponse<ReportResult>>(
+    '/api/v1/reports',
+    data
   );
   return response.data;
 };

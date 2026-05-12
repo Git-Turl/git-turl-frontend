@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { ArrowLeft, Check, GitBranch } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { getRepositories } from '../../api/member';
+import { getRepositories, createReport } from '../../api/member';
 
 export function AnalyticsNew() {
   const navigate = useNavigate();
@@ -33,9 +33,21 @@ export function AnalyticsNew() {
     navigate('/analytics');
   };
 
-  const handleGenerate = () => {
-    if (selectedRepo) {
-      navigate('/analytics/loading');
+  const handleGenerate = async () => {
+    if (!selectedRepo) return;
+
+    try {
+      const response = await createReport({ fullName: selectedRepo });
+      if (response.isSuccess && response.result) {
+        // 분석본 생성 성공 시 로딩 페이지로 이동
+        navigate('/analytics/loading');
+      } else {
+        alert(response.message || '분석본 생성에 실패했습니다.');
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || '분석본 생성 중 오류가 발생했습니다.';
+      alert(errorMessage);
+      console.error('분석본 생성 실패:', error);
     }
   };
 
