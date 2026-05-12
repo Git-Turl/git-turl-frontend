@@ -84,8 +84,8 @@ export function MyPage() {
   }
 
   const githubData = {
-    username: 'developer_kim',
-    githubUrl: 'https://github.com/developer_kim',
+    username: profileData.githubId,
+    githubUrl: `https://github.com/${profileData.githubId}`,
   };
 
   // API에서 받은 레포지토리 데이터를 SummaryCarousel 형식으로 변환
