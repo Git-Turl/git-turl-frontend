@@ -75,6 +75,14 @@ export type ProfileImageResult = {
   profileImage: string;
 };
 
+export type Repository = {
+  name: string;
+  fullName: string;
+  description: string | null;
+  updatedAt: string;
+  private: boolean;
+};
+
 // ========== API 호출 함수 ==========
 
 /**
@@ -112,6 +120,17 @@ export const updateProfile = async (
 export const getMyProfile = async (): Promise<ApiResponse<MyProfile>> => {
   const response = await client.get<ApiResponse<MyProfile>>(
     '/api/v1/members/me/profile'
+  );
+  return response.data;
+};
+
+/**
+ * 레포지토리 목록 조회
+ * GET /api/v1/repos
+ */
+export const getRepositories = async (): Promise<ApiResponse<Repository[]>> => {
+  const response = await client.get<ApiResponse<Repository[]>>(
+    '/api/v1/repos'
   );
   return response.data;
 };
