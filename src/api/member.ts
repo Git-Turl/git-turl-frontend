@@ -91,15 +91,15 @@ export const getProfileImage = async (): Promise<
 
 /**
  * 프로필 사진 수정
- * PUT /api/v1/members/me/profile-image
+ * PATCH /api/v1/members/me/profile-image
  * (multipart/form-data)
  */
 export const updateProfileImage = async (
   file: File
-): Promise<ApiResponse<ProfileImageResult>> => {
+): Promise<ApiResponse<null>> => {
   const formData = new FormData();
-  formData.append('file', file);
-  const response = await client.put<ApiResponse<ProfileImageResult>>(
+  formData.append('profileImage', file);
+  const response = await client.patch<ApiResponse<null>>(
     '/api/v1/members/me/profile-image',
     formData,
     {

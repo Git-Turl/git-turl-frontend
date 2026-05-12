@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Upload } from 'lucide-react';
+import { updateProfileImage } from '../../api/member';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -58,14 +59,38 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: Setti
     setNicknameChecked(true);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      // 이미지 파일 유효성 검사
+      if (!file.type.startsWith('image/')) {
+        alert('이미지 파일만 업로드 가능합니다.');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert('5MB 이하의 이미지만 업로드 가능합니다.');
+        return;
+      }
+
+      try {
+        // API 호출
+        const response = await updateProfileImage(file);
+        if (response.isSuccess) {
+          // 성공 시 미리보기 업데이트
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setProfileImage(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+          alert('프로필 사진이 성공적으로 변경되었습니다.');
+        } else {
+          alert(response.message || '프로필 사진 변경에 실패했습니다.');
+        }
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.message || '프로필 사진 변경 중 오류가 발생했습니다.';
+        alert(errorMessage);
+        console.error('프로필 사진 변경 실패:', error);
+      }
     }
   };
 
