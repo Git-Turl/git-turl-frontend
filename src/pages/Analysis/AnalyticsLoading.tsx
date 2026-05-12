@@ -1,19 +1,45 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { Loader2 } from 'lucide-react';
 import { Card } from '../../components/ui/card';
+import { getReportDetail } from '../../api/member';
 
 export function AnalyticsLoading() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const reportId = searchParams.get('reportId');
 
   useEffect(() => {
-    // 3초 동안 로딩 시뮬레이션 후 상세 페이지로 이동
-    const timer = setTimeout(() => {
-      navigate('/analytics/detail/new');
-    }, 3000);
+    const checkReportStatus = async () => {
+      if (!reportId) {
+        navigate('/analytics');
+        return;
+      }
 
-    return () => clearTimeout(timer);
-  }, [navigate]);
+      try {
+        const response = await getReportDetail(Number(reportId));
+        if (response.isSuccess) {
+          // 분석본이 준비되면 상세 페이지로 이동
+          navigate(`/analytics/detail/${reportId}`);
+        } else {
+          // 아직 준비되지 않았으면 재시도
+          setTimeout(checkReportStatus, 3000);
+        }
+      } catch (error: any) {
+        console.error('분석본 조회 실패:', error);
+        
+        // 404 에러면 분석본이 없으므로 목록으로 이동
+        if (error.response?.status === 404) {
+          navigate('/analytics');
+        } else {
+          // 기타 에러는 재시도
+          setTimeout(checkReportStatus, 3000);
+        }
+      }
+    };
+
+    checkReportStatus();
+  }, [navigate, reportId]);
 
   return (
     <div className="min-h-screen p-8 bg-[#F0F9FF]">

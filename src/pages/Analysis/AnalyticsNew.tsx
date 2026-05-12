@@ -39,8 +39,8 @@ export function AnalyticsNew() {
     try {
       const response = await createReport({ fullName: selectedRepo });
       if (response.isSuccess && response.result) {
-        // 분석본 생성 성공 시 로딩 페이지로 이동
-        navigate('/analytics/loading');
+        // 분석본 생성 성공 시 reportId와 함께 로딩 페이지로 이동
+        navigate(`/analytics/loading?reportId=${response.result.reportId}`);
       } else {
         alert(response.message || '분석본 생성에 실패했습니다.');
       }
