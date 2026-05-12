@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
 import { CircleCheck, CircleX, User, Camera } from 'lucide-react';
 import { StackSelectModal } from '../StackSelectModal.tsx';
-/*import { updateProfile } from '../../api/member';
-import { fieldToJobType, stacksToEnumList } from '../../utils/stackMapping'; -> cors 문제로 임시 로컬 저장중*/
+import { submitOnboarding } from '../../api/member';
+import { fieldToJobType, stacksToEnumList } from '../../utils/stackMapping';
 
 export function SignUp() {
   const [nickname, setNickname] = useState('');
@@ -43,7 +43,7 @@ export function SignUp() {
     setProfileImage(imageUrl);
   };
 
-  // 저장하기 핸들러 (시연용 - CORS 해결 전까지 API 비활성화)
+  // 저장하기 핸들러
   const handleSaveProfile = async () => {
     // 유효성 검사
     if (!nickname.trim()) {
@@ -61,29 +61,6 @@ export function SignUp() {
 
     setIsSubmitting(true);
 
-    // 저장 효과 (0.5초 대기 후 홈으로)
-    setTimeout(() => {
-      console.log('=== [시연용] 프로필 저장 ===');
-      console.log('닉네임:', nickname);
-      console.log('분야:', selectedField);
-      console.log('스택:', selectedStacks);
-
-      // 시연용: 유저 정보를 localStorage에 저장
-      const userInfo = {
-        nickname,
-        field: selectedField,
-        stacks: selectedStacks,
-        profileImage,
-      };
-      localStorage.setItem('userInfo', JSON.stringify(userInfo));
-      console.log('userInfo 저장:', userInfo);
-
-      console.log('→ /home으로 이동');
-      window.location.href = '/home';
-    }, 500);
-
-    // CORS 해결 후 주석 해제
-    /*
     const jobType = fieldToJobType(selectedField);
     if (!jobType) {
       alert('희망분야 값이 올바르지 않습니다.');
@@ -93,7 +70,7 @@ export function SignUp() {
     const techStackList = stacksToEnumList(selectedStacks);
 
     try {
-      const response = await updateProfile({
+      const response = await submitOnboarding({
         nickname,
         jobType,
         techStackList,
@@ -111,7 +88,6 @@ export function SignUp() {
     } finally {
       setIsSubmitting(false);
     }
-    */
   };
 
   // 모달에서 스택 저장 시 호출될 콜백

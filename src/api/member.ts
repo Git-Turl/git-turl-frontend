@@ -10,13 +10,53 @@ export type TechStack =
   | 'NEST_JS'
   | 'SPRING_BOOT'
   | 'DJANGO'
+  | 'FLASK'
+  | 'FAST_API'
+  | 'RUBY_ON_RAILS'
+  | 'ASP_NET'
+  | 'GO'
+  | 'RUST'
   | 'REACT'
+  | 'VUE_JS'
+  | 'ANGULAR'
   | 'TYPESCRIPT'
-  | 'KOTLIN'
-  | 'SWIFT'
   | 'JAVASCRIPT'
+  | 'NEXT_JS'
+  | 'SVELTE'
+  | 'JQUERY'
+  | 'HTML_CSS'
+  | 'TAILWIND_CSS'
+  | 'REACT_NATIVE'
+  | 'FLUTTER'
+  | 'SWIFT'
+  | 'KOTLIN'
+  | 'XAMARIN'
+  | 'MYSQL'
+  | 'POSTGRESQL'
+  | 'MONGODB'
+  | 'REDIS'
+  | 'ORACLE'
+  | 'SQLITE'
+  | 'DOCKER'
+  | 'KUBERNETES'
+  | 'AWS'
+  | 'AZURE'
+  | 'GCP'
+  | 'JENKINS'
+  | 'GITHUB_ACTIONS'
+  | 'GIT'
+  | 'RESTFUL_API'
+  | 'GRAPHQL'
   | 'ETC';
 
+// 온보딩용 요청 타입 (필수 필드)
+export type OnboardingRequest = {
+  nickname: string;
+  jobType: JobType;
+  techStackList: TechStack[];
+};
+
+// 프로필 수정용 요청 타입 (선택적 필드)
 export type ProfileRequest = {
   nickname?: string;
   jobType?: JobType;
@@ -39,12 +79,12 @@ export type ProfileImageResult = {
 
 /**
  * 프로필 정보 설정 (최초 온보딩)
- * POST /api/v1/members/me/onboarding
+ * PATCH /api/v1/members/me/onboarding
  */
 export const submitOnboarding = async (
-  data: ProfileRequest
+  data: OnboardingRequest
 ): Promise<ApiResponse<null>> => {
-  const response = await client.post<ApiResponse<null>>(
+  const response = await client.patch<ApiResponse<null>>(
     '/api/v1/members/me/onboarding',
     data
   );
