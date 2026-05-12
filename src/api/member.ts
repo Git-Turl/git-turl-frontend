@@ -91,6 +91,71 @@ export type ReportResult = {
   reportId: number;
 };
 
+// 분석본 상세 조회 타입
+export type Stack = {
+  language: string;
+  framework: string;
+  library: string;
+  security: string;
+};
+
+export type CommitStats = {
+  totalCommits: number;
+  myCommits: number;
+  myCommitRate: number;
+};
+
+export type CommitContribution = {
+  [key: string]: number;
+};
+
+export type Scale = {
+  fileCount: number;
+  commitCount: number;
+};
+
+export type FeatureDetail = {
+  title: string;
+  files: string[] | null;
+  content: string;
+};
+
+export type Features = {
+  feature1: FeatureDetail;
+  feature2: FeatureDetail;
+  feature3: FeatureDetail;
+  feature4: FeatureDetail;
+  feature5: FeatureDetail;
+};
+
+export type Improvements = {
+  improvement1: FeatureDetail;
+  improvement2: FeatureDetail;
+  improvement3: FeatureDetail;
+};
+
+export type Content = {
+  content: {
+    purpose: string;
+    stack: Stack;
+    commitStats: CommitStats;
+    commitContribution: CommitContribution;
+    scale: Scale;
+    reports: string;
+    features: Features;
+    improvements: Improvements;
+  };
+};
+
+export type ReportDetail = {
+  reportId: number;
+  repoName: string;
+  githubId: string;
+  status: 'PUBLIC' | 'PRIVATE';
+  createdAt: string;
+  content: Content | null;
+};
+
 // ========== API 호출 함수 ==========
 
 /**
@@ -188,6 +253,19 @@ export const createReport = async (
   const response = await client.post<ApiResponse<ReportResult>>(
     '/api/v1/reports',
     data
+  );
+  return response.data;
+};
+
+/**
+ * 레포지토리 분석본 상세 조회
+ * GET /api/v1/reports/{reportId}
+ */
+export const getReportDetail = async (
+  reportId: number
+): Promise<ApiResponse<ReportDetail>> => {
+  const response = await client.get<ApiResponse<ReportDetail>>(
+    `/api/v1/reports/${reportId}`
   );
   return response.data;
 };
