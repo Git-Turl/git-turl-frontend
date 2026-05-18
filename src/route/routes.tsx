@@ -25,6 +25,14 @@ import { InterviewNew } from '../pages/Interview/InterviewNew';
 import { InterviewLoading } from '../pages/Interview/InterviewLoading';
 import { InterviewDetail } from '../pages/Interview/InterviewDetail';
 
+// 음성면접
+import { VoiceInterview } from '../pages/VoiceInterview/VoiceInterview';
+import { VoiceInterviewNew } from '../pages/VoiceInterview/VoiceInterviewNew';
+import { VoiceInterviewLoading } from '../pages/VoiceInterview/VoiceInterviewLoading';
+import { VoiceInterviewDetail } from '../pages/VoiceInterview/VoiceInterviewDetail';
+import { VoiceInterviewFeedbackLoading } from '../pages/VoiceInterview/VoiceInterviewFeedbackLoading';
+import { VoiceInterviewFeedback } from '../pages/VoiceInterview/VoiceInterviewFeedback';
+
 export const router = createBrowserRouter([
   // 루트에서 온보딩으로 리다이렉트
   {
@@ -112,7 +120,31 @@ export const router = createBrowserRouter([
         path: 'interview/detail/:id',
         Component: InterviewDetail,
       },
-      
+      // 음성면접 라우트
+      {
+        path: 'voice-interview',
+        Component: VoiceInterview,
+      },
+      {
+        path: 'voice-interview/new',
+        Component: VoiceInterviewNew,
+      },
+      {
+        path: 'voice-interview/loading',
+        Component: VoiceInterviewLoading,
+      },
+      {
+        path: 'voice-interview/detail/:id',
+        Component: VoiceInterviewDetail,
+      },
+      {
+        path: 'voice-interview/feedback-loading',
+        Component: VoiceInterviewFeedbackLoading,
+      },
+      {
+        path: 'voice-interview/feedback/:id',
+        Component: VoiceInterviewFeedback,
+      },
       // 알림
       {
         path: 'notifications',
