@@ -156,6 +156,29 @@ export type ReportDetail = {
   content: Content | null;
 };
 
+// 분석본 목록 조회 타입
+export type ReportListItem = {
+  reportId: number;
+  reopName: string | null;
+  description: string | null;
+  createdAt: string;
+};
+
+export type ReportListResponse = {
+  data: ReportListItem[];
+  nextCursor: string;
+  hasNext: boolean;
+  pageSize: number;
+};
+
+export type ReportListParams = {
+  cursor?: string;
+  pageSize?: number;
+  startDate?: string;
+  endDate?: string;
+  status?: 'PUBLIC' | 'PRIVATE';
+};
+
 // ========== API 호출 함수 ==========
 
 /**
@@ -267,5 +290,28 @@ export const getReportDetail = async (
   const response = await client.get<ApiResponse<ReportDetail>>(
     `/api/v1/reports/${reportId}`
   );
+  return response.data;
+};
+
+/**
+ * 분석본 목록 조회
+ * GET /api/v1/reports
+ */
+export const getReportList = async (
+  params?: ReportListParams
+): Promise<ApiResponse<ReportListResponse>> => {
+  const queryParams = new URLSearchParams();
+  
+  if (params?.cursor) queryParams.append('cursor', params.cursor);
+  if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
+  if (params?.startDate) queryParams.append('startDate', params.startDate);
+  if (params?.endDate) queryParams.append('endDate', params.endDate);
+  if (params?.status) queryParams.append('status', params.status);
+
+  const url = queryParams.toString() 
+    ? `/api/v1/reports?${queryParams.toString()}`
+    : '/api/v1/reports';
+
+  const response = await client.get<ApiResponse<ReportListResponse>>(url);
   return response.data;
 };

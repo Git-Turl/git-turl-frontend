@@ -1,87 +1,47 @@
-import { useState } from 'react';
-import { Plus, Calendar, TrendingUp, FileText } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { useState, useEffect } from 'react';
+import { Plus, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { Card } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-
-interface RepositoryAnalysis {
-  id: string;
-  repoName: string;
-  description: string;
-  createdAt: string;
-  isPublic: boolean;
-}
+import { getReportList, type ReportListItem, type ReportListParams } from '../../api/member';
 
 export function Analytics() {
   const navigate = useNavigate();
   const [filterMode, setFilterMode] = useState<'all' | 'date'>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  const [reports, setReports] = useState<ReportListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasNext, setHasNext] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string>('');
 
-  // Mock 데이터
-  const analyses: RepositoryAnalysis[] = [
-    {
-      id: '1',
-      repoName: '쇼핑몰-클론코딩',
-      description: 'React + Node.js로 간단한 쇼핑몰 기능 구현 (로그인, 장바구니, 결제 흐름 연습)',
-      createdAt: '2026-03-15',
-      isPublic: true,
-    },
-    {
-      id: '2',
-      repoName: '리액트-렌더링-최적화',
-      description: '불필요한 리렌더링 줄이기 위한 memo, useCallback 실습',
-      createdAt: '2026-03-10',
-      isPublic: false,
-    },
-    {
-      id: '3',
-      repoName: 'graphql-연습',
-      description: 'Apollo Server로 간단한 GraphQL API 구성해보기',
-      createdAt: '2026-03-05',
-      isPublic: true,
-    },
-    {
-      id: '4',
-      repoName: 'docker-배포-연습',
-      description: 'Docker로 Node 서버 컨테이너화하고 EC2에 배포 연습',
-      createdAt: '2026-03-01',
-      isPublic: false,
-    },
-    {
-      id: '5',
-      repoName: '간단-추천모델',
-      description: 'Python으로 영화 추천 로직 간단히 구현 (협업 필터링 기초)',
-      createdAt: '2026-02-28',
-      isPublic: true,
-    },
-    {
-      id: '6',
-      repoName: '채팅앱-토이프로젝트',
-      description: 'Socket.io로 실시간 채팅 기능 구현해보기',
-      createdAt: '2026-02-25',
-      isPublic: true,
-    },
-  ];
-
-  const filteredAnalyses = filterMode === 'all'
-    ? analyses
-    : analyses.filter((analysis) => {
-      if (!startDate && !endDate) return true;
-
-      const analysisDate = new Date(analysis.createdAt);
-      const start = startDate ? new Date(startDate) : null;
-      const end = endDate ? new Date(endDate) : null;
-
-      if (start && end) {
-        return analysisDate >= start && analysisDate <= end;
-      } else if (start) {
-        return analysisDate >= start;
-      } else if (end) {
-        return analysisDate <= end;
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const params: ReportListParams = {};
+      
+      if (filterMode === 'date') {
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
       }
-      return true;
-    });
+      
+      params.pageSize = 10;
+
+      const response = await getReportList(params);
+      if (response.isSuccess && response.result) {
+        setReports(response.result.data);
+        setHasNext(response.result.hasNext);
+        setNextCursor(response.result.nextCursor);
+      }
+    } catch (error) {
+      console.error('분석본 목록 조회 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, [filterMode, startDate, endDate]);
 
   const handleNewAnalysis = () => {
     navigate('/analytics/new');
@@ -187,38 +147,43 @@ export function Analytics() {
             </button>
 
             {/* 기존 분석 카드 */}
-            {filteredAnalyses.map((analysis) => (
-              <Card
-                key={analysis.id}
-                onClick={() => handleCardClick(analysis.id)}
-                className="h-48 p-5 border border-sky-100 hover:shadow-lg hover:border-sky-300 transition-all cursor-pointer group"
-              >
-                <div className="flex flex-col h-full">
-                  {/* Repository 이름 */}
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-gray-900 group-hover:text-sky-700 transition-colors line-clamp-1">
-                      {analysis.repoName}
-                    </h3>
-                    {analysis.isPublic && (
-                      <Badge className="bg-green-100 text-green-700 text-xs border-0 hover:bg-green-100">
-                        공개
-                      </Badge>
-                    )}
-                  </div>
+            {loading ? (
+              <div className="col-span-full flex items-center justify-center py-12">
+                <div className="text-gray-500">분석본 목록을 불러오는 중...</div>
+              </div>
+            ) : reports.length === 0 ? (
+              <div className="col-span-full flex items-center justify-center py-12">
+                <div className="text-gray-500">분석본이 없습니다. 새 레포지토리 분석을 시작해보세요!</div>
+              </div>
+            ) : (
+              reports.map((report) => (
+                <Card
+                  key={report.reportId}
+                  onClick={() => handleCardClick(report.reportId.toString())}
+                  className="h-48 p-5 border border-sky-100 hover:shadow-lg hover:border-sky-300 transition-all cursor-pointer group"
+                >
+                  <div className="flex flex-col h-full">
+                    {/* Repository 이름 */}
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-gray-900 group-hover:text-sky-700 transition-colors line-clamp-1">
+                        {report.reopName || `분석본 #${report.reportId}`}
+                      </h3>
+                    </div>
 
-                  {/* 설명 */}
-                  <p className="text-sm text-gray-600 line-clamp-2 mb-auto">
-                    {analysis.description}
-                  </p>
+                    {/* 설명 */}
+                    <p className="text-sm text-gray-600 line-clamp-2 mb-auto">
+                      {report.description || '레포지토리 분석 결과'}
+                    </p>
 
-                  {/* 생성일 */}
-                  <div className="flex items-center gap-2 text-xs text-gray-500 mt-4">
-                    <Calendar className="w-3 h-3" />
-                    <span>{formatDisplayDate(analysis.createdAt)}</span>
+                    {/* 생성일 */}
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-4">
+                      <Calendar className="w-3 h-3" />
+                      <span>{formatDisplayDate(new Date(report.createdAt).toISOString().split('T')[0])}</span>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))
+            )}
           </div>
         </Card>
       </div>
