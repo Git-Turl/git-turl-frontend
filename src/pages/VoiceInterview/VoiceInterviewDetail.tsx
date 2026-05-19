@@ -3,50 +3,122 @@ import { useNavigate, useParams } from 'react-router';
 import { Mic, Square, ChevronRight, Clock, Check, X } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-
-const mockQuestions = [
-  'E-commerce 플랫폼에서 사용한 주요 기술 스택에 대해 설명해주세요.',
-  'JWT 기반 인증 시스템을 구현할 때 고려한 보안 요소는 무엇인가요?',
-  'PostgreSQL을 선택한 이유와 데이터베이스 최적화 전략을 말씀해주세요.',
-  'Stripe API를 통합하면서 겪었던 어려움과 해결 방법을 설명해주세요.',
-  'MVC 패턴을 적용한 이유와 레이어드 아키텍처의 장점을 설명해주세요.',
-];
+import {
+  getAllVoiceQuestions,
+  saveVoiceAnswer,
+  passVoiceAnswer,
+  type QuestionItem,
+} from '../../api/voiceInterview';
+import { getMockQuestions } from './mockData';
+import { useVoiceRecordingStore } from '../../store/voiceRecordingStore';
 
 const QUESTION_TIME = 120;
 
 export function VoiceInterviewDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [questions, setQuestions] = useState<QuestionItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [recordings, setRecordings] = useState<Record<number, { audioUrl: string; sttText: string }>>({});
+  const [recordings, setRecordings] = useState<Record<number, { audioUrl: string; audioBlob: Blob }>>({});
   const [skipped, setSkipped] = useState<Set<number>>(new Set());
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
-  const currentQuestion = mockQuestions[currentQuestionIndex];
-  const totalQuestions = mockQuestions.length;
+  const currentQuestion = questions[currentQuestionIndex]?.content ?? '';
+  const totalQuestions = questions.length;
   const hasRecording = recordings[currentQuestionIndex] !== undefined;
+
+  // 질문 목록 조회
+  useEffect(() => {
+    const reportId = Number(id);
+    const mock = getMockQuestions(
+      useVoiceRecordingStore.getState().mockQuestionCount
+    );
+    if (!reportId) {
+      setQuestions(mock);
+      setIsLoading(false);
+      return;
+    }
+    getAllVoiceQuestions(reportId)
+      .then((list) => setQuestions(list.length > 0 ? list : mock))
+      .catch(() => setQuestions(mock)) // 백엔드 실패 시 모크 폴백
+      .finally(() => setIsLoading(false));
+  }, [id]);
+
+  // 마이크 트랙 해제
+  const releaseStream = () => {
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+  };
 
   const stopRecording = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop(); // onstop 핸들러에서 Blob 생성
+    }
     setIsRecording(false);
     setTimeLeft(QUESTION_TIME);
-    setRecordings((prev) => ({
-      ...prev,
-      [currentQuestionIndex]: {
-        audioUrl: 'mock-audio-url',
-        sttText: '저는 이 프로젝트에서 Node.js와 Express를 백엔드 프레임워크로 사용했으며, 데이터베이스는 PostgreSQL을 선택했습니다.',
-      },
-    }));
-  }, [currentQuestionIndex]);
+  }, []);
 
-  const startRecording = () => {
-    setTimeLeft(QUESTION_TIME);
-    setIsRecording(true);
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      audioChunksRef.current = [];
+
+      // webm 우선, 미지원 브라우저(Safari 등)는 기본 형식 사용
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : '';
+      const recorder = new MediaRecorder(
+        stream,
+        mimeType ? { mimeType } : undefined
+      );
+      mediaRecorderRef.current = recorder;
+      const questionIndex = currentQuestionIndex;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blobType = recorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        setRecordings((prev) => ({
+          ...prev,
+          [questionIndex]: { audioUrl, audioBlob },
+        }));
+        releaseStream();
+
+        const question = questions[questionIndex];
+        if (question) {
+          // 피드백 화면에서 재생할 수 있도록 스토어에 저장
+          useVoiceRecordingStore
+            .getState()
+            .setRecording(question.questionId, audioBlob);
+          // 음성 답변 저장 (백엔드)
+          saveVoiceAnswer(question.questionId, audioBlob, 'answer.webm').catch(
+            (e) => console.error('음성 답변 저장 실패', e)
+          );
+        }
+      };
+
+      recorder.start();
+      setTimeLeft(QUESTION_TIME);
+      setIsRecording(true);
+    } catch {
+      alert('마이크 접근 권한이 필요합니다. 브라우저 설정을 확인해주세요.');
+      releaseStream();
+    }
   };
 
   useEffect(() => {
@@ -68,9 +140,22 @@ export function VoiceInterviewDetail() {
 
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
     setIsRecording(false);
     setTimeLeft(QUESTION_TIME);
   }, [currentQuestionIndex]);
+
+  // 언마운트 시 녹음 중단 및 마이크 해제
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -99,8 +184,25 @@ export function VoiceInterviewDetail() {
 
   const handleSkip = () => {
     setSkipped((prev) => new Set(prev).add(currentQuestionIndex));
+    const question = questions[currentQuestionIndex];
+    if (question) {
+      passVoiceAnswer(question.questionId).catch((e) =>
+        console.error('답변 패스 실패', e)
+      );
+    }
     handleNext();
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen p-8 bg-[#F0F9FF]">
+        <div className="max-w-5xl mx-auto">
+          <h1 className="text-3xl text-gray-900 mb-2">음성 면접</h1>
+          <p className="text-gray-600">질문을 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-8 bg-[#F0F9FF]">
@@ -190,9 +292,17 @@ export function VoiceInterviewDetail() {
                   <p className="text-lg text-green-700 font-medium">✓ 녹음 완료</p>
                   <Button
                     onClick={() => {
+                      const rec = recordings[currentQuestionIndex];
+                      if (rec) URL.revokeObjectURL(rec.audioUrl);
                       const newRecordings = { ...recordings };
                       delete newRecordings[currentQuestionIndex];
                       setRecordings(newRecordings);
+                      const q = questions[currentQuestionIndex];
+                      if (q) {
+                        useVoiceRecordingStore
+                          .getState()
+                          .removeRecording(q.questionId);
+                      }
                     }}
                     variant="outline"
                     className="px-8 py-3 text-base border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -233,7 +343,7 @@ export function VoiceInterviewDetail() {
           {/* Progress Tracker */}
           <div className="sticky top-8 w-[72px]">
             <div className="bg-white border border-sky-100 rounded-2xl shadow-sm px-3 py-5 flex flex-col items-center gap-0">
-              {mockQuestions.map((_, index) => {
+              {questions.map((_, index) => {
                 const isDone = !!recordings[index];
                 const isSkippedQ = skipped.has(index) && !recordings[index];
                 const isCurrent = index === currentQuestionIndex;
