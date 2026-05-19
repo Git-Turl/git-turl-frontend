@@ -17,7 +17,9 @@ export function Analytics() {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const params: ReportListParams = {};
+      const params: ReportListParams = {
+        answerType: 'ALL'
+      };
       
       if (filterMode === 'date') {
         if (startDate) params.startDate = startDate;
@@ -166,7 +168,7 @@ export function Analytics() {
                     {/* Repository 이름 */}
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="text-gray-900 group-hover:text-sky-700 transition-colors line-clamp-1">
-                        {report.reopName || `분석본 #${report.reportId}`}
+                        {report.repoName || `분석본 #${report.reportId}`}
                       </h3>
                     </div>
 

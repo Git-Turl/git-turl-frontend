@@ -4,7 +4,7 @@ import { ChevronRight, FileDown } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { getReportDetail } from '../../api/member';
+import { getReportDetail, updateReportStatus } from '../../api/member';
 
 export function AnalyticsDetail() {
   const { id } = useParams();
@@ -12,6 +12,7 @@ export function AnalyticsDetail() {
   const [isPublic, setIsPublic] = useState(false);
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     const fetchReportDetail = async () => {
@@ -53,6 +54,32 @@ export function AnalyticsDetail() {
 
   const handleGenerateInterview = () => {
     navigate('/interview');
+  };
+
+  const handleStatusToggle = async () => {
+    if (!id || isUpdatingStatus) return;
+
+    const newStatus = !isPublic ? 'PUBLIC' : 'PRIVATE';
+    setIsUpdatingStatus(true);
+
+    try {
+      const response = await updateReportStatus(Number(id), { status: newStatus });
+      if (response.isSuccess && response.result) {
+        setIsPublic(response.result.status === 'PUBLIC');
+        // Update the analysisData status as well
+        setAnalysisData({
+          ...analysisData,
+          status: response.result.status
+        });
+      }
+    } catch (error: any) {
+      console.error('공개 설정 변경 실패:', error);
+      // Revert the toggle on error
+      setIsPublic(!isPublic);
+      alert('공개 설정 변경에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   if (loading) {
@@ -102,9 +129,10 @@ export function AnalyticsDetail() {
               {/* 공개/비공개 토글 스위치 */}
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setIsPublic(!isPublic)}
+                  onClick={handleStatusToggle}
+                  disabled={isUpdatingStatus}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPublic ? 'bg-green-500' : 'bg-gray-300'
-                    }`}
+                    } ${isUpdatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${isPublic ? 'translate-x-6' : 'translate-x-1'
@@ -112,7 +140,7 @@ export function AnalyticsDetail() {
                   />
                 </button>
                 <span className={`text-sm font-medium ${isPublic ? 'text-green-700' : 'text-gray-700'}`}>
-                  {isPublic ? '공개' : '비공개'}
+                  {isUpdatingStatus ? '변경 중...' : (isPublic ? '공개' : '비공개')}
                 </span>
               </div>
 

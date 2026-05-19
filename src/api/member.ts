@@ -159,9 +159,10 @@ export type ReportDetail = {
 // 분석본 목록 조회 타입
 export type ReportListItem = {
   reportId: number;
-  reopName: string | null;
+  repoName: string | null;
   description: string | null;
   createdAt: string;
+  questionCount: number;
 };
 
 export type ReportListResponse = {
@@ -177,6 +178,7 @@ export type ReportListParams = {
   startDate?: string;
   endDate?: string;
   status?: 'PUBLIC' | 'PRIVATE';
+  answerType: 'TEXT' | 'VOICE' | 'ALL';
 };
 
 // ========== API 호출 함수 ==========
@@ -298,20 +300,42 @@ export const getReportDetail = async (
  * GET /api/v1/reports
  */
 export const getReportList = async (
-  params?: ReportListParams
+  params: ReportListParams
 ): Promise<ApiResponse<ReportListResponse>> => {
   const queryParams = new URLSearchParams();
   
-  if (params?.cursor) queryParams.append('cursor', params.cursor);
-  if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
-  if (params?.startDate) queryParams.append('startDate', params.startDate);
-  if (params?.endDate) queryParams.append('endDate', params.endDate);
-  if (params?.status) queryParams.append('status', params.status);
+  if (params.cursor) queryParams.append('cursor', params.cursor);
+  if (params.pageSize) queryParams.append('pageSize', params.pageSize.toString());
+  if (params.startDate) queryParams.append('startDate', params.startDate);
+  if (params.endDate) queryParams.append('endDate', params.endDate);
+  if (params.status) queryParams.append('status', params.status);
+  queryParams.append('answerType', params.answerType);
 
-  const url = queryParams.toString() 
-    ? `/api/v1/reports?${queryParams.toString()}`
-    : '/api/v1/reports';
+  const url = `/api/v1/reports?${queryParams.toString()}`;
 
   const response = await client.get<ApiResponse<ReportListResponse>>(url);
+  return response.data;
+};
+
+/**
+ * 분석본 공개 설정 변경
+ * PATCH /api/v1/reports/{reportId}/status
+ */
+export type UpdateReportStatusRequest = {
+  status: 'PUBLIC' | 'PRIVATE';
+};
+
+export type UpdateReportStatusResult = {
+  status: 'PUBLIC' | 'PRIVATE';
+};
+
+export const updateReportStatus = async (
+  reportId: number,
+  data: UpdateReportStatusRequest
+): Promise<ApiResponse<UpdateReportStatusResult>> => {
+  const response = await client.patch<ApiResponse<UpdateReportStatusResult>>(
+    `/api/v1/reports/${reportId}/status`,
+    data
+  );
   return response.data;
 };
