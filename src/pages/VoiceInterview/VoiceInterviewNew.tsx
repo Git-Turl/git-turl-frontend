@@ -1,31 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Check, FileText } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import {
+  getVoiceReports,
+  generateQuestions,
+  type ReportSummary,
+} from '../../api/voiceInterview';
+import { useVoiceRecordingStore } from '../../store/voiceRecordingStore';
+
+// 확인용 모크 요약본 — 실제 목록이 비었거나 조회 실패(미로그인 등) 시 폴백
+const MOCK_REPORT: ReportSummary = {
+  reportId: 1,
+  repoName: '(테스트) sample-repo',
+  description: '확인용 모크 요약본입니다',
+  createdAt: '2026-05-19',
+  questionCount: 0,
+};
 
 export function VoiceInterviewNew() {
   const navigate = useNavigate();
-  const [selectedSummary, setSelectedSummary] = useState<string>('');
+  const [reports, setReports] = useState<ReportSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
   const [questionCount, setQuestionCount] = useState<number>(3);
   const [filterMode, setFilterMode] = useState<'all' | 'date'>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [generating, setGenerating] = useState(false);
 
-  // Mock summary list
-  const summaries = [
-    { name: 'ecommerce-platform', description: 'E-commerce 플랫폼 분석', createdAt: '2026.01.15' },
-    { name: 'react-optimization', description: 'React 성능 최적화', createdAt: '2026.01.10' },
-    { name: 'graphql-api', description: 'GraphQL API 서버', createdAt: '2025.12.28' },
-    { name: 'k8s-deploy', description: 'Kubernetes 배포 구성', createdAt: '2025.12.25' },
-    { name: 'ml-pipeline', description: 'ML 파이프라인', createdAt: '2025.12.20' },
-    { name: 'chat-app', description: '실시간 채팅 애플리케이션', createdAt: '2025.12.15' },
-  ];
+  useEffect(() => {
+    getVoiceReports()
+      .then((list) => setReports(list.length > 0 ? list : [MOCK_REPORT]))
+      .catch(() => setReports([MOCK_REPORT]))
+      .finally(() => setIsLoading(false));
+  }, []);
 
-  const filteredSummaries = summaries.filter((summary) => {
+  const filteredReports = reports.filter((report) => {
     if (filterMode === 'all') return true;
 
-    const itemDate = new Date(summary.createdAt.replace(/\./g, '-'));
+    const itemDate = new Date(report.createdAt);
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
 
@@ -34,14 +49,28 @@ export function VoiceInterviewNew() {
     return true;
   });
 
+  const selectedReport = reports.find((r) => r.reportId === selectedReportId);
+
   const handleGoBack = () => {
     navigate('/voice-interview');
   };
 
-  const handleGenerate = () => {
-    if (selectedSummary) {
-      navigate('/voice-interview/loading');
+  const handleGenerate = async () => {
+    if (selectedReportId == null) return;
+    setGenerating(true);
+    // 모크 모드에서 선택한 질문 개수를 상세/피드백 화면에 반영하기 위해 저장
+    useVoiceRecordingStore.getState().setMockQuestionCount(questionCount);
+    try {
+      await generateQuestions(selectedReportId, {
+        questionCount,
+        answerType: 'VOICE',
+      });
+    } catch {
+      // 백엔드 실패 시에도 모크 모드로 흐름을 이어감
     }
+    navigate('/voice-interview/loading', {
+      state: { reportId: selectedReportId },
+    });
   };
 
   return (
@@ -143,42 +172,52 @@ export function VoiceInterviewNew() {
               </div>
             )}
 
-            {/* 요약본 그리드 리스트*/}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              {filteredSummaries.map((summary) => (
-                <button
-                  key={summary.name}
-                  onClick={() => setSelectedSummary(summary.name)}
-                  className={`relative p-5 border-2 rounded-xl text-left transition-all ${
-                    selectedSummary === summary.name
-                      ? 'border-sky-500 bg-sky-50 shadow-md'
-                      : 'border-gray-200 hover:border-sky-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {selectedSummary === summary.name && (
-                    <div className="absolute top-4 right-4 w-6 h-6 rounded-full bg-sky-600 flex items-center justify-center">
-                      <Check className="w-4 h-4 text-white" />
-                    </div>
-                  )}
+            {/* 요약본 그리드 리스트 */}
+            {isLoading ? (
+              <div className="py-16 text-center text-gray-500">요약본을 불러오는 중...</div>
+            ) : filteredReports.length === 0 ? (
+              <div className="py-16 text-center text-gray-500">조회된 요약본이 없습니다.</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {filteredReports.map((report) => (
+                  <button
+                    key={report.reportId}
+                    onClick={() => setSelectedReportId(report.reportId)}
+                    className={`relative p-5 border-2 rounded-xl text-left transition-all ${
+                      selectedReportId === report.reportId
+                        ? 'border-sky-500 bg-sky-50 shadow-md'
+                        : 'border-gray-200 hover:border-sky-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {selectedReportId === report.reportId && (
+                      <div className="absolute top-4 right-4 w-6 h-6 rounded-full bg-sky-600 flex items-center justify-center">
+                        <Check className="w-4 h-4 text-white" />
+                      </div>
+                    )}
 
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1">
-                      <FileText className={`w-5 h-5 ${selectedSummary === summary.name ? 'text-sky-700' : 'text-gray-400'}`} />
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1">
+                        <FileText className={`w-5 h-5 ${selectedReportId === report.reportId ? 'text-sky-700' : 'text-gray-400'}`} />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className={`font-medium mb-1 ${selectedReportId === report.reportId ? 'text-sky-900' : 'text-gray-900'}`}>
+                          {report.repoName}
+                        </h3>
+                        {report.description && (
+                          <p className="text-sm text-gray-600 mb-2">{report.description}</p>
+                        )}
+                        <p className="text-xs text-gray-500">
+                          {report.createdAt} · 음성 질문 {report.questionCount}개
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className={`font-medium mb-1 ${selectedSummary === summary.name ? 'text-sky-900' : 'text-gray-900'}`}>
-                        {summary.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-2">{summary.description}</p>
-                      <p className="text-xs text-gray-500">{summary.createdAt}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* 질문 개수 선택 */}
-            {selectedSummary && (
+            {selectedReport && (
               <div className="mb-6 p-6 bg-sky-50 border border-sky-200 rounded-lg">
                 <h3 className="text-sm text-gray-700 font-medium mb-4">생성할 음성 질문 개수를 선택하세요</h3>
                 <div className="flex items-center gap-3">
@@ -201,11 +240,11 @@ export function VoiceInterviewNew() {
             )}
 
             {/* 선택된 요약본 */}
-            {selectedSummary && (
+            {selectedReport && (
               <div className="mb-6 p-4 bg-sky-50 border border-sky-200 rounded-lg">
                 <p className="text-sm text-gray-700">
                   <span className="text-gray-600">선택된 요약본:</span>
-                  <span className="ml-2 font-medium text-sky-700">{selectedSummary}</span>
+                  <span className="ml-2 font-medium text-sky-700">{selectedReport.repoName}</span>
                   <span className="ml-4 text-gray-600">질문 개수:</span>
                   <span className="ml-2 font-medium text-sky-700">{questionCount}개</span>
                 </p>
@@ -225,14 +264,14 @@ export function VoiceInterviewNew() {
 
               <Button
                 onClick={handleGenerate}
-                disabled={!selectedSummary}
+                disabled={selectedReportId == null || generating}
                 className={`px-8 py-2 ${
-                  selectedSummary
+                  selectedReportId != null && !generating
                     ? 'bg-sky-600 text-white hover:bg-sky-700 shadow-sm'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                생성하기
+                {generating ? '생성 중...' : '생성하기'}
               </Button>
             </div>
           </Card>

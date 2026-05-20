@@ -1,18 +1,61 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { Loader2 } from 'lucide-react';
 import { Card } from '../../components/ui/card';
+import { getAllVoiceQuestions } from '../../api/voiceInterview';
+
+const POLL_INTERVAL = 3000; // 3초
+const MAX_ATTEMPTS = 100; // 약 5분
 
 export function VoiceInterviewLoading() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const reportId = location.state?.reportId as number | undefined;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate('/voice-interview/detail/1');
-    }, 3000);
+    if (!reportId) {
+      // reportId 없이 들어온 경우 (직접 URL 진입 등)
+      navigate('/voice-interview');
+      return;
+    }
 
-    return () => clearTimeout(timer);
-  }, [navigate]);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let attempts = 0;
+    let errorCount = 0;
+
+    // 질문 생성이 끝났는지(PROCESSING이 없는지) 폴링
+    const poll = async () => {
+      attempts += 1;
+      try {
+        const questions = await getAllVoiceQuestions(reportId);
+        if (cancelled) return;
+        errorCount = 0;
+        const ready =
+          questions.length > 0 &&
+          questions.every((q) => q.status !== 'PROCESSING');
+        if (ready || attempts >= MAX_ATTEMPTS) {
+          navigate(`/voice-interview/detail/${reportId}`);
+          return;
+        }
+      } catch {
+        // 백엔드 응답 실패가 반복되면 모크 모드로 간주하고 상세로 진행
+        errorCount += 1;
+        if (errorCount >= 2 || attempts >= MAX_ATTEMPTS) {
+          if (!cancelled) navigate(`/voice-interview/detail/${reportId}`);
+          return;
+        }
+      }
+      if (!cancelled) timer = setTimeout(poll, POLL_INTERVAL);
+    };
+
+    poll();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [navigate, reportId]);
 
   return (
     <div className="min-h-screen p-8 bg-[#F0F9FF]">
