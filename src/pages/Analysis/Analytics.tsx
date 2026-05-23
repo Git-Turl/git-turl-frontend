@@ -168,7 +168,7 @@ export function Analytics() {
                     {/* Repository 이름 */}
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="text-gray-900 group-hover:text-sky-700 transition-colors line-clamp-1">
-                        {report.repoName || `분석본 #${report.reportId}`}
+                        {report.reportTitle ?? report.repoName ?? `분석본 #${report.reportId}`}
                       </h3>
                     </div>
 
@@ -180,7 +180,7 @@ export function Analytics() {
                     {/* 생성일 */}
                     <div className="flex items-center gap-2 text-xs text-gray-500 mt-4">
                       <Calendar className="w-3 h-3" />
-                      <span>{formatDisplayDate(new Date(report.createdAt).toISOString().split('T')[0])}</span>
+                      <span>{formatDisplayDate(report.createdAt)}</span>
                     </div>
                   </div>
                 </Card>

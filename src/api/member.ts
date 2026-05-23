@@ -150,7 +150,7 @@ export type Content = {
 export type ReportDetail = {
   reportId: number;
   repoName: string;
-  title?: string;
+  reportTitle?: string;
   githubId: string;
   status: 'PUBLIC' | 'PRIVATE';
   createdAt: string;
@@ -161,6 +161,7 @@ export type ReportDetail = {
 export type ReportListItem = {
   reportId: number;
   repoName: string | null;
+  reportTitle?: string;
   description: string | null;
   createdAt: string;
   questionCount: number;
