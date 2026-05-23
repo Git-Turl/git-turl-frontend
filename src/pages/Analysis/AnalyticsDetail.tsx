@@ -30,7 +30,7 @@ export function AnalyticsDetail() {
         if (response.isSuccess && response.result) {
           setAnalysisData(response.result);
           setIsPublic(response.result.status === 'PUBLIC');
-          setTitle(response.result.title ?? response.result.repoName);
+          setTitle(response.result.reportTitle ?? response.result.repoName);
         } else {
           // 아직 준비되지 않았으면 로딩 페이지로
           navigate(`/analytics/loading?reportId=${id}`);
