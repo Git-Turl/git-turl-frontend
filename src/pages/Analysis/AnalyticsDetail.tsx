@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { ChevronRight, FileDown } from 'lucide-react';
+import { ChevronRight, FileDown, Pencil, Check, X } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { getReportDetail, updateReportStatus } from '../../api/member';
+import { getReportDetail, updateReportStatus, updateReportTitle } from '../../api/member';
 
 export function AnalyticsDetail() {
   const { id } = useParams();
@@ -13,6 +13,10 @@ export function AnalyticsDetail() {
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [title, setTitle] = useState('');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState('');
+  const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
 
   useEffect(() => {
     const fetchReportDetail = async () => {
@@ -26,6 +30,7 @@ export function AnalyticsDetail() {
         if (response.isSuccess && response.result) {
           setAnalysisData(response.result);
           setIsPublic(response.result.status === 'PUBLIC');
+          setTitle(response.result.title ?? response.result.repoName);
         } else {
           // 아직 준비되지 않았으면 로딩 페이지로
           navigate(`/analytics/loading?reportId=${id}`);
@@ -47,6 +52,34 @@ export function AnalyticsDetail() {
 
     fetchReportDetail();
   }, [id, navigate]);
+
+  const handleEditTitleStart = () => {
+    setTitleInput(title);
+    setIsEditingTitle(true);
+  };
+
+  const handleEditTitleCancel = () => {
+    setIsEditingTitle(false);
+    setTitleInput('');
+  };
+
+  const handleSaveTitle = async () => {
+    if (!id || isUpdatingTitle || !titleInput.trim()) return;
+
+    setIsUpdatingTitle(true);
+    try {
+      const response = await updateReportTitle(Number(id), { title: titleInput.trim() });
+      if (response.isSuccess && response.result) {
+        setTitle(response.result.title);
+        setIsEditingTitle(false);
+      }
+    } catch (error: any) {
+      console.error('제목 변경 실패:', error);
+      alert('제목 변경에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsUpdatingTitle(false);
+    }
+  };
 
   const handleDownloadPDF = () => {
     alert('PDF 다운로드 기능이 실행됩니다.');
@@ -116,10 +149,53 @@ export function AnalyticsDetail() {
         <Card className="p-8 bg-white border border-sky-100 shadow-sm">
           {/* 헤더 */}
           <div className="flex items-start justify-between mb-6 pb-6 border-b border-gray-200">
-            <div>
-              <h1 className="text-2xl text-gray-900 mb-2">
-                깃허브 요약 내역 / {analysisData.repoName}
-              </h1>
+            <div className="flex-1 min-w-0">
+              {isEditingTitle ? (
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={titleInput}
+                    onChange={(e) => setTitleInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveTitle();
+                      if (e.key === 'Escape') handleEditTitleCancel();
+                    }}
+                    autoFocus
+                    maxLength={100}
+                    className="text-2xl text-gray-900 border-b-2 border-sky-400 bg-transparent focus:outline-none w-full"
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleSaveTitle}
+                    disabled={isUpdatingTitle || !titleInput.trim()}
+                    className="text-sky-600 hover:text-sky-700 hover:bg-sky-50 shrink-0"
+                  >
+                    <Check className="w-5 h-5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleEditTitleCancel}
+                    disabled={isUpdatingTitle}
+                    className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 shrink-0"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group mb-2">
+                  <h1 className="text-2xl text-gray-900 truncate">{title}</h1>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleEditTitleStart}
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-sky-600 hover:bg-sky-50 shrink-0 transition-opacity"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
               <p className="text-sm text-gray-500">
                 작성일: {new Date(analysisData.createdAt).toLocaleDateString('ko-KR')}
               </p>
