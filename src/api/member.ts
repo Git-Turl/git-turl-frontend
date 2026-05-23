@@ -150,6 +150,7 @@ export type Content = {
 export type ReportDetail = {
   reportId: number;
   repoName: string;
+  title?: string;
   githubId: string;
   status: 'PUBLIC' | 'PRIVATE';
   createdAt: string;
@@ -335,6 +336,30 @@ export const updateReportStatus = async (
 ): Promise<ApiResponse<UpdateReportStatusResult>> => {
   const response = await client.patch<ApiResponse<UpdateReportStatusResult>>(
     `/api/v1/reports/${reportId}/status`,
+    data
+  );
+  return response.data;
+};
+
+/**
+ * 분석본 제목 변경
+ * PATCH /api/v1/reports/{reportId}/title
+ */
+export type UpdateReportTitleRequest = {
+  title: string;
+};
+
+export type UpdateReportTitleResult = {
+  title: string;
+  updatedAt: string;
+};
+
+export const updateReportTitle = async (
+  reportId: number,
+  data: UpdateReportTitleRequest
+): Promise<ApiResponse<UpdateReportTitleResult>> => {
+  const response = await client.patch<ApiResponse<UpdateReportTitleResult>>(
+    `/api/v1/reports/${reportId}/title?reportId=${reportId}`,
     data
   );
   return response.data;
