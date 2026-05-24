@@ -10,6 +10,7 @@ import {
   saveAnswer as saveAnswerApi,
   createFeedback,
   deleteAnswer as deleteAnswerApi,
+  deleteQuestion as deleteQuestionApi,
   type QuestionItem,
   type AnswerItem,
 } from '../../api/member';
@@ -237,6 +238,23 @@ export function InterviewDetail() {
     }
   };
 
+  const deleteQuestion = async (questionId: number) => {
+    if (!window.confirm('질문을 삭제하시겠습니까? 관련 답변도 모두 삭제됩니다.')) return;
+    try {
+      const response = await deleteQuestionApi(questionId);
+      if (response.isSuccess) {
+        setQuestions((prev) => prev.filter((q) => q.questionId !== questionId));
+        setOpenQuestions((prev) => {
+          const next = new Set(prev);
+          next.delete(questionId);
+          return next;
+        });
+      }
+    } catch {
+      alert('질문 삭제에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
   const generateFeedback = async (questionId: number, answerId: number) => {
     setQuestions((prev) =>
       prev.map((q) =>
@@ -431,12 +449,28 @@ export function InterviewDetail() {
                         <p className="text-gray-900 font-medium">{q.content}</p>
                       )}
                     </div>
-                    {q.status === 'DONE' &&
-                      (openQuestions.has(q.questionId) ? (
-                        <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0 ml-2" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 ml-2" />
-                      ))}
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteQuestion(q.questionId);
+                        }}
+                        className="p-1 text-gray-300 hover:text-red-400 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14H6L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                          <path d="M9 6V4h6v2" />
+                        </svg>
+                      </button>
+                      {q.status === 'DONE' &&
+                        (openQuestions.has(q.questionId) ? (
+                          <ChevronDown className="w-5 h-5 text-gray-400" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                        ))}
+                    </div>
                   </button>
 
                   {/* 질문 상세 (펼침) */}

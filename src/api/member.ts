@@ -498,3 +498,16 @@ export const deleteAnswer = async (
   );
   return response.data;
 };
+
+/**
+ * 질문 삭제
+ * DELETE /api/v1/questions/{questionId}
+ */
+export const deleteQuestion = async (
+  questionId: number
+): Promise<ApiResponse<null>> => {
+  const response = await client.delete<ApiResponse<null>>(
+    `/api/v1/questions/${questionId}`
+  );
+  return response.data;
+};
