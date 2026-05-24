@@ -3,12 +3,23 @@ import { Link, useParams } from 'react-router';
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { getReportDetail, getQuestions, saveAnswer as saveAnswerApi, type QuestionItem } from '../../api/member';
+import {
+  getReportDetail,
+  getQuestions,
+  getAnswers,
+  saveAnswer as saveAnswerApi,
+  createFeedback,
+  type QuestionItem,
+  type AnswerItem,
+} from '../../api/member';
+
+type LocalAnswer = AnswerItem & {
+  isGeneratingFeedback: boolean;
+};
 
 type LocalQuestion = QuestionItem & {
-  answer: string;
-  feedback: string;
-  isGeneratingFeedback: boolean;
+  answers: LocalAnswer[];
+  isLoadingAnswers: boolean;
 };
 
 export function InterviewDetail() {
@@ -19,10 +30,9 @@ export function InterviewDetail() {
   const [loading, setLoading] = useState(true);
   const [pollingTimedOut, setPollingTimedOut] = useState(false);
   const [openQuestions, setOpenQuestions] = useState<Set<number>>(new Set());
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollAttemptsRef = useRef(0);
   const questionsRef = useRef<LocalQuestion[]>([]);
-  const [editingAnswer, setEditingAnswer] = useState<number | null>(null);
+  const [addingAnswerTo, setAddingAnswerTo] = useState<number | null>(null);
   const [answerInput, setAnswerInput] = useState<string>('');
   const [isSavingAnswer, setIsSavingAnswer] = useState(false);
 
@@ -49,9 +59,8 @@ export function InterviewDetail() {
           setQuestions(
             data.map((q) => ({
               ...q,
-              answer: '',
-              feedback: '',
-              isGeneratingFeedback: false,
+              answers: [],
+              isLoadingAnswers: false,
             }))
           );
           if (data.length > 0) {
@@ -100,9 +109,8 @@ export function InterviewDetail() {
               const existing = prev.find((p) => p.questionId === q.questionId);
               return {
                 ...q,
-                answer: existing?.answer ?? '',
-                feedback: existing?.feedback ?? '',
-                isGeneratingFeedback: existing?.isGeneratingFeedback ?? false,
+                answers: existing?.answers ?? [],
+                isLoadingAnswers: existing?.isLoadingAnswers ?? false,
               };
             })
           );
@@ -112,7 +120,6 @@ export function InterviewDetail() {
       }
     }, 10000);
 
-    pollingRef.current = intervalId;
     return () => clearInterval(intervalId);
   }, [loading, id]);
 
@@ -131,9 +138,8 @@ export function InterviewDetail() {
             const existing = prev.find((p) => p.questionId === q.questionId);
             return {
               ...q,
-              answer: existing?.answer ?? '',
-              feedback: existing?.feedback ?? '',
-              isGeneratingFeedback: existing?.isGeneratingFeedback ?? false,
+              answers: existing?.answers ?? [],
+              isLoadingAnswers: existing?.isLoadingAnswers ?? false,
             };
           })
         );
@@ -143,19 +149,49 @@ export function InterviewDetail() {
     }
   };
 
+  const fetchAnswersForQuestion = async (questionId: number) => {
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q.questionId === questionId ? { ...q, isLoadingAnswers: true } : q
+      )
+    );
+    try {
+      const res = await getAnswers(questionId);
+      if (res.isSuccess && res.result) {
+        setQuestions((prev) =>
+          prev.map((q) =>
+            q.questionId === questionId
+              ? {
+                  ...q,
+                  answers: res.result!.map((a) => ({
+                    ...a,
+                    isGeneratingFeedback: false,
+                  })),
+                  isLoadingAnswers: false,
+                }
+              : q
+          )
+        );
+      }
+    } catch {
+      setQuestions((prev) =>
+        prev.map((q) =>
+          q.questionId === questionId ? { ...q, isLoadingAnswers: false } : q
+        )
+      );
+    }
+  };
+
   const toggleQuestion = (questionId: number) => {
     const next = new Set(openQuestions);
     if (next.has(questionId)) {
       next.delete(questionId);
+      setOpenQuestions(next);
     } else {
       next.add(questionId);
+      setOpenQuestions(next);
+      fetchAnswersForQuestion(questionId);
     }
-    setOpenQuestions(next);
-  };
-
-  const startEditingAnswer = (questionId: number, currentAnswer: string) => {
-    setEditingAnswer(questionId);
-    setAnswerInput(currentAnswer);
   };
 
   const saveAnswer = async (questionId: number) => {
@@ -163,15 +199,13 @@ export function InterviewDetail() {
 
     setIsSavingAnswer(true);
     try {
-      const response = await saveAnswerApi(questionId, { content: answerInput.trim() });
+      const response = await saveAnswerApi(questionId, {
+        content: answerInput.trim(),
+      });
       if (response.isSuccess) {
-        setQuestions(
-          questions.map((q) =>
-            q.questionId === questionId ? { ...q, answer: answerInput.trim() } : q
-          )
-        );
-        setEditingAnswer(null);
         setAnswerInput('');
+        setAddingAnswerTo(null);
+        fetchAnswersForQuestion(questionId);
       }
     } catch (error: any) {
       const code = error.response?.data?.code;
@@ -185,35 +219,103 @@ export function InterviewDetail() {
     }
   };
 
-  const cancelEditingAnswer = () => {
-    setEditingAnswer(null);
+  const cancelForm = () => {
+    setAddingAnswerTo(null);
     setAnswerInput('');
   };
 
-  const generateFeedback = (questionId: number) => {
-    setQuestions(
-      questions.map((q) =>
-        q.questionId === questionId ? { ...q, isGeneratingFeedback: true } : q
+  const generateFeedback = async (questionId: number, answerId: number) => {
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q.questionId === questionId
+          ? {
+              ...q,
+              answers: q.answers.map((a) =>
+                a.answerId === answerId
+                  ? { ...a, isGeneratingFeedback: true }
+                  : a
+              ),
+            }
+          : q
       )
     );
 
-    setTimeout(() => {
-      const mockFeedback = `훌륭한 답변입니다! 기술적 이해도가 높으며, 실제 프로젝트 경험을 바탕으로 구체적인 예시를 들어 설명하셨습니다.
-
-개선할 점:
-1. 구체적인 성능 지표나 수치를 포함하면 더 설득력이 있을 것 같습니다.
-2. 트레이드오프나 선택의 이유를 조금 더 명확히 설명하면 좋겠습니다.
-
-전반적으로 매우 우수한 답변입니다. 실무 경험이 잘 드러나고 있습니다.`;
-
+    const onError = () => {
       setQuestions((prev) =>
         prev.map((q) =>
           q.questionId === questionId
-            ? { ...q, feedback: mockFeedback, isGeneratingFeedback: false }
+            ? {
+                ...q,
+                answers: q.answers.map((a) =>
+                  a.answerId === answerId
+                    ? { ...a, isGeneratingFeedback: false }
+                    : a
+                ),
+              }
             : q
         )
       );
-    }, 2000);
+      alert('피드백 생성에 실패했습니다. 다시 시도해주세요.');
+    };
+
+    try {
+      const response = await createFeedback(answerId);
+      if (!response.isSuccess) {
+        onError();
+        return;
+      }
+
+      // 피드백 생성 완료 폴링 (3초 후 시작, 5초 간격 최대 12회)
+      let attempts = 0;
+      const pollFeedback = async () => {
+        attempts++;
+        try {
+          const res = await getAnswers(questionId);
+          if (res.isSuccess && res.result) {
+            const updated = res.result.find((a) => a.answerId === answerId);
+            if (updated?.feedback !== null || attempts >= 12) {
+              setQuestions((prev) =>
+                prev.map((q) =>
+                  q.questionId === questionId
+                    ? {
+                        ...q,
+                        answers: res.result!.map((a) => ({
+                          ...a,
+                          isGeneratingFeedback: false,
+                        })),
+                        isLoadingAnswers: false,
+                      }
+                    : q
+                )
+              );
+              return;
+            }
+          }
+        } catch {
+          // ignore and retry
+        }
+        if (attempts < 12) setTimeout(pollFeedback, 5000);
+        else {
+          setQuestions((prev) =>
+            prev.map((q) =>
+              q.questionId === questionId
+                ? {
+                    ...q,
+                    answers: q.answers.map((a) =>
+                      a.answerId === answerId
+                        ? { ...a, isGeneratingFeedback: false }
+                        : a
+                    ),
+                  }
+                : q
+            )
+          );
+        }
+      };
+      setTimeout(pollFeedback, 3000);
+    } catch {
+      onError();
+    }
   };
 
   const displayName = reportName || `분석본 #${id}`;
@@ -253,27 +355,31 @@ export function InterviewDetail() {
               질문 {doneCount}개
               {questions.some((q) => q.status === 'PROCESSING') && (
                 <span className="ml-2 text-sky-600">
-                  ({questions.filter((q) => q.status === 'PROCESSING').length}개 생성 중)
+                  (
+                  {questions.filter((q) => q.status === 'PROCESSING').length}개
+                  생성 중)
                 </span>
               )}
             </p>
           </div>
 
           {/* 생성 지연 안내 배너 */}
-          {pollingTimedOut && questions.some((q) => q.status === 'PROCESSING') && (
-            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-4">
-              <p className="text-sm text-amber-800">
-                질문 생성에 예상보다 오랜 시간이 걸리고 있습니다. 잠시 후 다시 확인해주세요.
-              </p>
-              <Button
-                onClick={handleManualRefresh}
-                variant="outline"
-                className="shrink-0 text-sm border-amber-300 text-amber-700 hover:bg-amber-100"
-              >
-                새로고침
-              </Button>
-            </div>
-          )}
+          {pollingTimedOut &&
+            questions.some((q) => q.status === 'PROCESSING') && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-4">
+                <p className="text-sm text-amber-800">
+                  질문 생성에 예상보다 오랜 시간이 걸리고 있습니다. 잠시 후
+                  다시 확인해주세요.
+                </p>
+                <Button
+                  onClick={handleManualRefresh}
+                  variant="outline"
+                  className="shrink-0 text-sm border-amber-300 text-amber-700 hover:bg-amber-100"
+                >
+                  새로고침
+                </Button>
+              </div>
+            )}
 
           {/* 질문 목록 */}
           {questions.length === 0 ? (
@@ -323,121 +429,143 @@ export function InterviewDetail() {
                   {/* 질문 상세 (펼침) */}
                   {q.status === 'DONE' && openQuestions.has(q.questionId) && (
                     <div className="p-5 pt-4 bg-gray-50 border-t border-gray-200">
-                      {/* 답변 섹션 */}
-                      <div className="mb-4">
-                        <h3 className="text-sm font-medium text-gray-700 mb-4">
-                          답변
-                        </h3>
-
-                        {editingAnswer === q.questionId ? (
-                          <div className="space-y-4">
-                            <textarea
-                              value={answerInput}
-                              onChange={(e) => setAnswerInput(e.target.value)}
-                              maxLength={200}
-                              placeholder="답변을 입력하세요 (최대 200자)"
-                              className="w-full p-4 border border-sky-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
-                              rows={6}
-                            />
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-500">
-                                {answerInput.length} / 200
-                              </span>
-                              <div className="flex gap-2">
+                      {q.isLoadingAnswers ? (
+                        <div className="flex items-center justify-center py-8 gap-2 text-gray-500">
+                          <Loader2 className="w-4 h-4 animate-spin text-sky-500" />
+                          <span className="text-sm">
+                            답변 목록을 불러오는 중...
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {/* 답변 없음 */}
+                          {q.answers.length === 0 &&
+                            addingAnswerTo !== q.questionId && (
+                              <div className="p-6 bg-white border border-gray-200 rounded-lg text-center">
+                                <p className="text-gray-500 mb-4">
+                                  아직 등록된 답변이 없습니다
+                                </p>
                                 <Button
-                                  onClick={cancelEditingAnswer}
-                                  disabled={isSavingAnswer}
-                                  variant="outline"
-                                  className="px-4 py-2 text-sm border-gray-300 text-gray-700 hover:bg-gray-50"
+                                  onClick={() =>
+                                    setAddingAnswerTo(q.questionId)
+                                  }
+                                  className="px-6 py-2 bg-sky-600 text-white hover:bg-sky-700"
                                 >
-                                  취소
-                                </Button>
-                                <Button
-                                  onClick={() => saveAnswer(q.questionId)}
-                                  disabled={answerInput.length === 0 || isSavingAnswer}
-                                  className={`px-4 py-2 text-sm ${
-                                    answerInput.length > 0 && !isSavingAnswer
-                                      ? 'bg-sky-600 text-white hover:bg-sky-700'
-                                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                  }`}
-                                >
-                                  {isSavingAnswer ? '저장 중...' : '저장하기'}
+                                  답변 작성하기
                                 </Button>
                               </div>
-                            </div>
-                          </div>
-                        ) : q.answer ? (
-                          <div className="space-y-4">
-                            <div className="p-4 bg-white border border-gray-200 rounded-lg">
-                              <p className="text-gray-700 whitespace-pre-wrap">
-                                {q.answer}
+                            )}
+
+                          {/* 기존 답변 목록 */}
+                          {q.answers.map((answer, aIdx) => (
+                            <div
+                              key={answer.answerId}
+                              className="bg-white border border-gray-200 rounded-lg p-4"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-medium text-sky-700 bg-sky-50 px-2 py-0.5 rounded">
+                                  답변 {aIdx + 1}
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                  {answer.createdAt.replace(/-/g, '.')}
+                                </span>
+                              </div>
+
+                              <p className="text-gray-700 text-sm whitespace-pre-wrap mb-3">
+                                {answer.content}
                               </p>
-                            </div>
-                            <div className="flex gap-2 justify-end">
-                              <Button
-                                onClick={() =>
-                                  startEditingAnswer(q.questionId, q.answer)
-                                }
-                                variant="outline"
-                                className="px-4 py-2 text-sm border-sky-300 text-sky-700 hover:bg-sky-50"
-                              >
-                                수정하기
-                              </Button>
-                              {!q.feedback && !q.isGeneratingFeedback && (
-                                <Button
-                                  onClick={() => generateFeedback(q.questionId)}
-                                  className="px-4 py-2 text-sm bg-sky-400 text-white hover:bg-sky-500"
-                                >
-                                  피드백 받기
-                                </Button>
+
+                              {/* 피드백 */}
+                              {answer.isGeneratingFeedback ? (
+                                <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg">
+                                  <div className="flex items-center gap-2">
+                                    <Loader2 className="w-4 h-4 text-sky-600 animate-spin" />
+                                    <p className="text-sm text-sky-700">
+                                      피드백 생성 중...
+                                    </p>
+                                  </div>
+                                </div>
+                              ) : answer.feedback ? (
+                                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                  <p className="text-xs font-medium text-green-700 mb-1">
+                                    AI 피드백
+                                  </p>
+                                  <p className="text-gray-700 text-sm whitespace-pre-wrap">
+                                    {answer.feedback}
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="flex justify-end">
+                                  <Button
+                                    onClick={() =>
+                                      generateFeedback(q.questionId, answer.answerId)
+                                    }
+                                    className="px-4 py-1.5 text-sm bg-sky-400 text-white hover:bg-sky-500"
+                                  >
+                                    피드백 받기
+                                  </Button>
+                                </div>
                               )}
                             </div>
-                          </div>
-                        ) : (
-                          <div className="p-6 bg-white border border-gray-200 rounded-lg text-center">
-                            <p className="text-gray-500 mb-4">
-                              아직 등록된 답변이 없습니다
-                            </p>
-                            <Button
-                              onClick={() =>
-                                startEditingAnswer(q.questionId, '')
-                              }
-                              className="px-6 py-2 bg-sky-600 text-white hover:bg-sky-700"
-                            >
-                              답변 작성하기
-                            </Button>
-                          </div>
-                        )}
-                      </div>
+                          ))}
 
-                      {/* 피드백 섹션 */}
-                      {q.isGeneratingFeedback && (
-                        <div className="mt-4 p-4 bg-sky-50 border border-sky-200 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Loader2 className="w-5 h-5 text-sky-600 animate-spin" />
-                            <p className="text-sm text-sky-700">
-                              피드백 생성 중...
-                            </p>
-                          </div>
-                          <div className="mt-3 w-full bg-sky-200 rounded-full h-1.5">
-                            <div
-                              className="bg-sky-600 h-1.5 rounded-full animate-pulse"
-                              style={{ width: '60%' }}
-                            ></div>
-                          </div>
-                        </div>
-                      )}
-
-                      {q.feedback && !q.isGeneratingFeedback && (
-                        <div className="mt-4">
-                          <h3 className="text-sm font-medium text-gray-700 mb-4">
-                            AI 피드백
-                          </h3>
-                          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                            <p className="text-gray-700 text-sm whitespace-pre-wrap">
-                              {q.feedback}
-                            </p>
-                          </div>
+                          {/* 답변 추가 폼 */}
+                          {addingAnswerTo === q.questionId ? (
+                            <div className="bg-white border border-sky-200 rounded-lg p-4 space-y-3">
+                              <textarea
+                                value={answerInput}
+                                onChange={(e) => setAnswerInput(e.target.value)}
+                                maxLength={200}
+                                placeholder="답변을 입력하세요 (최대 200자)"
+                                className="w-full p-3 border border-sky-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white text-sm"
+                                rows={5}
+                                autoFocus
+                              />
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-500">
+                                  {answerInput.length} / 200
+                                </span>
+                                <div className="flex gap-2">
+                                  <Button
+                                    onClick={cancelForm}
+                                    disabled={isSavingAnswer}
+                                    variant="outline"
+                                    className="px-4 py-2 text-sm border-gray-300 text-gray-700 hover:bg-gray-50"
+                                  >
+                                    취소
+                                  </Button>
+                                  <Button
+                                    onClick={() => saveAnswer(q.questionId)}
+                                    disabled={
+                                      answerInput.length === 0 || isSavingAnswer
+                                    }
+                                    className={`px-4 py-2 text-sm ${
+                                      answerInput.length > 0 && !isSavingAnswer
+                                        ? 'bg-sky-600 text-white hover:bg-sky-700'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    {isSavingAnswer ? '저장 중...' : '저장하기'}
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            q.answers.length > 0 &&
+                            q.answers.length < 3 && (
+                              <div className="flex justify-end">
+                                <Button
+                                  onClick={() =>
+                                    setAddingAnswerTo(q.questionId)
+                                  }
+                                  variant="outline"
+                                  className="px-4 py-2 text-sm border-sky-300 text-sky-700 hover:bg-sky-50"
+                                >
+                                  답변 추가하기 ({q.answers.length}/3)
+                                </Button>
+                              </div>
+                            )
+                          )}
                         </div>
                       )}
                     </div>

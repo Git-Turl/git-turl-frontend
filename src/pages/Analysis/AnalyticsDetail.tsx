@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { ChevronRight, FileDown, Pencil, Check, X } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
 import { getReportDetail, updateReportStatus, updateReportTitle, createQuestions } from '../../api/member';
 
 export function AnalyticsDetail() {
