@@ -429,3 +429,22 @@ export const updateReportTitle = async (
   );
   return response.data;
 };
+
+/**
+ * 답변 저장
+ * POST /api/v1/questions/{questionId}/answers
+ */
+export type SaveAnswerRequest = {
+  content: string;
+};
+
+export const saveAnswer = async (
+  questionId: number,
+  data: SaveAnswerRequest
+): Promise<ApiResponse<null>> => {
+  const response = await client.post<ApiResponse<null>>(
+    `/api/v1/questions/${questionId}/answers`,
+    data
+  );
+  return response.data;
+};
