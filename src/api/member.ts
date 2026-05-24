@@ -355,6 +355,70 @@ export type UpdateReportTitleResult = {
   updatedAt: string;
 };
 
+/**
+ * 질문 목록 조회
+ * GET /api/v1/reports/{reportId}/questions
+ */
+export type QuestionItem = {
+  questionId: number;
+  content: string | null;
+  createdAt: string;
+  status: 'PROCESSING' | 'DONE';
+  time: number | null;
+};
+
+export type QuestionListResponse = {
+  data: QuestionItem[];
+  nextCursor: string;
+  hasNext: boolean;
+  pageSize: number;
+};
+
+export type QuestionListParams = {
+  cursor?: string;
+  pageSize?: number;
+  answerType: 'TEXT' | 'VOICE';
+};
+
+export const getQuestions = async (
+  reportId: number,
+  params: QuestionListParams
+): Promise<ApiResponse<QuestionListResponse>> => {
+  const queryParams = new URLSearchParams();
+  queryParams.append('answerType', params.answerType);
+  if (params.cursor) queryParams.append('cursor', params.cursor);
+  if (params.pageSize) queryParams.append('pageSize', params.pageSize.toString());
+
+  const response = await client.get<ApiResponse<QuestionListResponse>>(
+    `/api/v1/reports/${reportId}/questions?${queryParams.toString()}`
+  );
+  return response.data;
+};
+
+/**
+ * 질문 생성
+ * POST /api/v1/reports/{reportId}/questions
+ */
+export type CreateQuestionsRequest = {
+  questionCount: number;
+  answerType: 'TEXT' | 'VOICE';
+};
+
+export type CreateQuestionsResult = {
+  questionIdList: number[];
+};
+
+export const createQuestions = async (
+  reportId: number,
+  data: CreateQuestionsRequest
+): Promise<ApiResponse<CreateQuestionsResult>> => {
+  const response = await client.post<ApiResponse<CreateQuestionsResult>>(
+    `/api/v1/reports/${reportId}/questions`,
+    data
+  );
+  return response.data;
+};
+
 export const updateReportTitle = async (
   reportId: number,
   data: UpdateReportTitleRequest

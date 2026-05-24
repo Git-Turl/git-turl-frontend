@@ -1,32 +1,59 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Plus, Calendar, MessageSquare } from 'lucide-react';
 import { Card } from '../../components/ui/card';
+import { getReportList, getQuestions, type ReportListItem } from '../../api/member';
 
 export function Interview() {
   const [filterMode, setFilterMode] = useState<'all' | 'date'>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [reports, setReports] = useState<ReportListItem[]>([]);
+  const [questionDates, setQuestionDates] = useState<Record<number, string>>({});
+  const [loading, setLoading] = useState(true);
 
-  // 임시 데이터
-  const interviews = [
-    { id: 1, repoName: '쇼핑몰-클론코딩', questionCount: 5, createdAt: '2026.01.15' },
-    { id: 2, repoName: '리액트-렌더링-최적화', questionCount: 3, createdAt: '2026.01.10' },
-    { id: 3, repoName: 'graphql-연습', questionCount: 4, createdAt: '2025.12.28' },
-    { id: 4, repoName: '간단-추천모델', questionCount: 5, createdAt: '2025.12.20' },
-  ];
+  useEffect(() => {
+    const fetchReports = async () => {
+      setLoading(true);
+      try {
+        const params: Parameters<typeof getReportList>[0] = {
+          answerType: 'TEXT',
+          pageSize: 20,
+        };
+        if (filterMode === 'date') {
+          if (startDate) params.startDate = startDate;
+          if (endDate) params.endDate = endDate;
+        }
+        const response = await getReportList(params);
+        if (response.isSuccess && response.result) {
+          const data = response.result.data;
+          setReports(data);
 
-  const filteredInterviews = interviews.filter((interview) => {
-    if (filterMode === 'all') return true;
-
-    const itemDate = new Date(interview.createdAt.replace(/\./g, '-'));
-    const start = startDate ? new Date(startDate) : null;
-    const end = endDate ? new Date(endDate) : null;
-
-    if (start && itemDate < start) return false;
-    if (end && itemDate > end) return false;
-    return true;
-  });
+          // 각 리포트의 질문 생성일을 병렬로 조회
+          const dateEntries = await Promise.all(
+            data.map(async (report) => {
+              try {
+                const qRes = await getQuestions(report.reportId, {
+                  answerType: 'TEXT',
+                  pageSize: 1,
+                });
+                const firstQ = qRes.result?.data[0];
+                return [report.reportId, firstQ?.createdAt ?? ''] as const;
+              } catch {
+                return [report.reportId, ''] as const;
+              }
+            })
+          );
+          setQuestionDates(Object.fromEntries(dateEntries));
+        }
+      } catch (error) {
+        console.error('면접 질문 목록 조회 실패:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, [filterMode, startDate, endDate]);
 
   return (
     <div className="min-h-screen p-8 bg-[#F0F9FF]">
@@ -120,11 +147,21 @@ export function Interview() {
             </Link>
 
             {/* 기존 면접 카드 */}
-            {filteredInterviews.length > 0 ? (
-              filteredInterviews.map((interview) => (
+            {loading ? (
+              <div className="col-span-full flex items-center justify-center py-12">
+                <div className="text-gray-500">면접 질문 목록을 불러오는 중...</div>
+              </div>
+            ) : reports.length === 0 ? (
+              <div className="col-span-full text-center py-12 text-gray-500">
+                {filterMode === 'date'
+                  ? '해당 기간에 생성된 면접 질문이 없습니다.'
+                  : '아직 생성된 면접 질문이 없습니다.'}
+              </div>
+            ) : (
+              reports.map((report) => (
                 <Link
-                  key={interview.id}
-                  to={`/interview/detail/${interview.id}`}
+                  key={report.reportId}
+                  to={`/interview/detail/${report.reportId}`}
                   className="block"
                 >
                   <Card className="h-48 p-5 border border-sky-100 hover:shadow-lg hover:border-sky-300 transition-all cursor-pointer group">
@@ -132,32 +169,32 @@ export function Interview() {
                       {/* Repository 이름 */}
                       <div className="flex items-start justify-between mb-3">
                         <h3 className="text-gray-900 group-hover:text-sky-700 transition-colors line-clamp-1 font-medium">
-                          {interview.repoName}
+                          {report.reportTitle ?? report.repoName ?? `분석본 #${report.reportId}`}
                         </h3>
-                        <div className="flex items-center gap-1 px-2 py-1 bg-sky-50 text-sky-700 rounded text-xs font-medium">
+                        <div className="flex items-center gap-1 px-2 py-1 bg-sky-50 text-sky-700 rounded text-xs font-medium shrink-0 ml-2">
                           <MessageSquare className="w-3 h-3" />
-                          <span>{interview.questionCount}</span>
+                          <span>{report.questionCount}</span>
                         </div>
                       </div>
 
-                      {/* 설명/정보 */}
-                      <p className="text-sm text-gray-600 mb-auto">
-                        면접 질문 {interview.questionCount}개
+                      {/* 설명 */}
+                      <p className="text-sm text-gray-600 mb-auto line-clamp-2">
+                        {report.description || `면접 질문 ${report.questionCount}개`}
                       </p>
 
-                      {/* 생성일 */}
+                      {/* 질문 생성일 */}
                       <div className="flex items-center gap-2 text-xs text-gray-500 mt-4">
                         <Calendar className="w-3 h-3" />
-                        <span>{interview.createdAt}</span>
+                        <span>
+                          {questionDates[report.reportId]
+                            ? questionDates[report.reportId].replace(/-/g, '.')
+                            : report.createdAt.replace(/-/g, '.')}
+                        </span>
                       </div>
                     </div>
                   </Card>
                 </Link>
               ))
-            ) : filterMode === 'date' && (
-              <div className="col-span-full text-center py-12 text-gray-500">
-                해당 기간에 생성된 면접 질문이 없습니다.
-              </div>
             )}
           </div>
         </Card>

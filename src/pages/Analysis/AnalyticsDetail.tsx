@@ -4,7 +4,7 @@ import { ChevronRight, FileDown, Pencil, Check, X } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { getReportDetail, updateReportStatus, updateReportTitle } from '../../api/member';
+import { getReportDetail, updateReportStatus, updateReportTitle, createQuestions } from '../../api/member';
 
 export function AnalyticsDetail() {
   const { id } = useParams();
@@ -17,6 +17,10 @@ export function AnalyticsDetail() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState('');
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+  const [showQuestionForm, setShowQuestionForm] = useState(false);
+  const [questionCount, setQuestionCount] = useState(3);
+  const [answerType, setAnswerType] = useState<'TEXT' | 'VOICE'>('TEXT');
+  const [isCreatingQuestions, setIsCreatingQuestions] = useState(false);
 
   useEffect(() => {
     const fetchReportDetail = async () => {
@@ -85,8 +89,26 @@ export function AnalyticsDetail() {
     alert('PDF 다운로드 기능이 실행됩니다.');
   };
 
-  const handleGenerateInterview = () => {
-    navigate('/interview');
+  const handleCreateQuestions = async () => {
+    if (!id || isCreatingQuestions) return;
+
+    setIsCreatingQuestions(true);
+    try {
+      const response = await createQuestions(Number(id), { questionCount, answerType });
+      if (response.isSuccess) {
+        setShowQuestionForm(false);
+        navigate(
+          answerType === 'VOICE'
+            ? '/voice-interview'
+            : `/interview/detail/${id}`
+        );
+      }
+    } catch (error: any) {
+      console.error('질문 생성 실패:', error);
+      alert('질문 생성에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsCreatingQuestions(false);
+    }
   };
 
   const handleStatusToggle = async () => {
@@ -371,14 +393,79 @@ export function AnalyticsDetail() {
             </div>
           </div>
 
-          {/* 면접 질문 생성 버튼 */}
-          <div className="flex justify-center pt-6 border-t border-gray-200">
-            <button
-              onClick={handleGenerateInterview}
-              className="px-8 py-3 bg-sky-400 text-white rounded-lg font-medium hover:bg-sky-500 transition-colors shadow-sm hover:shadow-md"
-            >
-              면접 질문 생성
-            </button>
+          {/* 면접 질문 생성 */}
+          <div className="flex flex-col items-center gap-4 pt-6 border-t border-gray-200">
+            {!showQuestionForm ? (
+              <button
+                onClick={() => setShowQuestionForm(true)}
+                className="px-8 py-3 bg-sky-400 text-white rounded-lg font-medium hover:bg-sky-500 transition-colors shadow-sm hover:shadow-md"
+              >
+                면접 질문 생성
+              </button>
+            ) : (
+              <div className="w-full max-w-md bg-sky-50 rounded-xl p-6 border border-sky-200">
+                <h3 className="text-gray-900 font-medium mb-5">질문 생성 설정</h3>
+
+                {/* 답변 유형 */}
+                <div className="mb-5">
+                  <p className="text-sm text-gray-700 mb-2">답변 유형</p>
+                  <div className="flex gap-2">
+                    {(['TEXT', 'VOICE'] as const).map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setAnswerType(type)}
+                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          answerType === type
+                            ? 'bg-sky-500 text-white'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:border-sky-300'
+                        }`}
+                      >
+                        {type === 'TEXT' ? '텍스트' : '음성'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 질문 개수 */}
+                <div className="mb-6">
+                  <p className="text-sm text-gray-700 mb-2">
+                    질문 개수{' '}
+                    <span className="text-sky-600 font-semibold">{questionCount}개</span>
+                  </p>
+                  <input
+                    type="range"
+                    min={1}
+                    max={5}
+                    value={questionCount}
+                    onChange={(e) => setQuestionCount(Number(e.target.value))}
+                    className="w-full accent-sky-500"
+                  />
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <span key={n}>{n}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 액션 버튼 */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowQuestionForm(false)}
+                    disabled={isCreatingQuestions}
+                    className="flex-1 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleCreateQuestions}
+                    disabled={isCreatingQuestions}
+                    className="flex-1 py-2 text-sm text-white bg-sky-400 rounded-lg hover:bg-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isCreatingQuestions ? '생성 중...' : '생성하기'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
       </div>
