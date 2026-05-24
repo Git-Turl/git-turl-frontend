@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router';
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { getReportDetail, getQuestions, type QuestionItem } from '../../api/member';
+import { getReportDetail, getQuestions, saveAnswer as saveAnswerApi, type QuestionItem } from '../../api/member';
 
 type LocalQuestion = QuestionItem & {
   answer: string;
@@ -24,6 +24,7 @@ export function InterviewDetail() {
   const questionsRef = useRef<LocalQuestion[]>([]);
   const [editingAnswer, setEditingAnswer] = useState<number | null>(null);
   const [answerInput, setAnswerInput] = useState<string>('');
+  const [isSavingAnswer, setIsSavingAnswer] = useState(false);
 
   questionsRef.current = questions;
 
@@ -157,14 +158,31 @@ export function InterviewDetail() {
     setAnswerInput(currentAnswer);
   };
 
-  const saveAnswer = (questionId: number) => {
-    setQuestions(
-      questions.map((q) =>
-        q.questionId === questionId ? { ...q, answer: answerInput } : q
-      )
-    );
-    setEditingAnswer(null);
-    setAnswerInput('');
+  const saveAnswer = async (questionId: number) => {
+    if (isSavingAnswer || !answerInput.trim()) return;
+
+    setIsSavingAnswer(true);
+    try {
+      const response = await saveAnswerApi(questionId, { content: answerInput.trim() });
+      if (response.isSuccess) {
+        setQuestions(
+          questions.map((q) =>
+            q.questionId === questionId ? { ...q, answer: answerInput.trim() } : q
+          )
+        );
+        setEditingAnswer(null);
+        setAnswerInput('');
+      }
+    } catch (error: any) {
+      const code = error.response?.data?.code;
+      if (code === 'ANSWER400_1') {
+        alert('답변은 질문당 최대 3개까지 저장할 수 있습니다.');
+      } else {
+        alert('답변 저장에 실패했습니다. 다시 시도해주세요.');
+      }
+    } finally {
+      setIsSavingAnswer(false);
+    }
   };
 
   const cancelEditingAnswer = () => {
@@ -328,6 +346,7 @@ export function InterviewDetail() {
                               <div className="flex gap-2">
                                 <Button
                                   onClick={cancelEditingAnswer}
+                                  disabled={isSavingAnswer}
                                   variant="outline"
                                   className="px-4 py-2 text-sm border-gray-300 text-gray-700 hover:bg-gray-50"
                                 >
@@ -335,14 +354,14 @@ export function InterviewDetail() {
                                 </Button>
                                 <Button
                                   onClick={() => saveAnswer(q.questionId)}
-                                  disabled={answerInput.length === 0}
+                                  disabled={answerInput.length === 0 || isSavingAnswer}
                                   className={`px-4 py-2 text-sm ${
-                                    answerInput.length > 0
+                                    answerInput.length > 0 && !isSavingAnswer
                                       ? 'bg-sky-600 text-white hover:bg-sky-700'
                                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                   }`}
                                 >
-                                  저장하기
+                                  {isSavingAnswer ? '저장 중...' : '저장하기'}
                                 </Button>
                               </div>
                             </div>
