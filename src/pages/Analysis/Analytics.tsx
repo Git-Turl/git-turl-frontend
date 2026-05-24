@@ -11,8 +11,6 @@ export function Analytics() {
   const [endDate, setEndDate] = useState<string>('');
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasNext, setHasNext] = useState(false);
-  const [nextCursor, setNextCursor] = useState<string>('');
 
   const fetchReports = async () => {
     try {
@@ -31,8 +29,6 @@ export function Analytics() {
       const response = await getReportList(params);
       if (response.isSuccess && response.result) {
         setReports(response.result.data);
-        setHasNext(response.result.hasNext);
-        setNextCursor(response.result.nextCursor);
       }
     } catch (error) {
       console.error('분석본 목록 조회 실패:', error);

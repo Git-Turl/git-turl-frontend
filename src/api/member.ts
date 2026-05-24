@@ -438,13 +438,50 @@ export type SaveAnswerRequest = {
   content: string;
 };
 
+export type SaveAnswerResult = {
+  answerId: number;
+};
+
 export const saveAnswer = async (
   questionId: number,
   data: SaveAnswerRequest
-): Promise<ApiResponse<null>> => {
-  const response = await client.post<ApiResponse<null>>(
+): Promise<ApiResponse<SaveAnswerResult>> => {
+  const response = await client.post<ApiResponse<SaveAnswerResult>>(
     `/api/v1/questions/${questionId}/answers`,
     data
+  );
+  return response.data;
+};
+
+/**
+ * 피드백 생성
+ * POST /api/v1/answers/{answerId}/feedbacks
+ */
+export const createFeedback = async (
+  answerId: number
+): Promise<ApiResponse<null>> => {
+  const response = await client.post<ApiResponse<null>>(
+    `/api/v1/answers/${answerId}/feedbacks`
+  );
+  return response.data;
+};
+
+/**
+ * 답변&피드백 목록 조회
+ * GET /api/v1/questions/{questionId}/answers
+ */
+export type AnswerItem = {
+  answerId: number;
+  content: string;
+  feedback: string | null;
+  createdAt: string;
+};
+
+export const getAnswers = async (
+  questionId: number
+): Promise<ApiResponse<AnswerItem[]>> => {
+  const response = await client.get<ApiResponse<AnswerItem[]>>(
+    `/api/v1/questions/${questionId}/answers`
   );
   return response.data;
 };
