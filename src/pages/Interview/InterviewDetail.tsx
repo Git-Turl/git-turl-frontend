@@ -9,6 +9,7 @@ import {
   getAnswers,
   saveAnswer as saveAnswerApi,
   createFeedback,
+  deleteAnswer as deleteAnswerApi,
   type QuestionItem,
   type AnswerItem,
 } from '../../api/member';
@@ -222,6 +223,18 @@ export function InterviewDetail() {
   const cancelForm = () => {
     setAddingAnswerTo(null);
     setAnswerInput('');
+  };
+
+  const deleteAnswer = async (questionId: number, answerId: number) => {
+    if (!window.confirm('답변을 삭제하시겠습니까?')) return;
+    try {
+      const response = await deleteAnswerApi(answerId);
+      if (response.isSuccess) {
+        fetchAnswersForQuestion(questionId);
+      }
+    } catch {
+      alert('답변 삭제에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const generateFeedback = async (questionId: number, answerId: number) => {
@@ -486,16 +499,38 @@ export function InterviewDetail() {
                                   </div>
                                 </div>
                               ) : answer.feedback ? (
-                                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                                  <p className="text-xs font-medium text-green-700 mb-1">
-                                    AI 피드백
-                                  </p>
-                                  <p className="text-gray-700 text-sm whitespace-pre-wrap">
-                                    {answer.feedback}
-                                  </p>
-                                </div>
+                                <>
+                                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <p className="text-xs font-medium text-green-700 mb-1">
+                                      AI 피드백
+                                    </p>
+                                    <p className="text-gray-700 text-sm whitespace-pre-wrap">
+                                      {answer.feedback}
+                                    </p>
+                                  </div>
+                                  <div className="flex justify-end mt-2">
+                                    <Button
+                                      onClick={() =>
+                                        deleteAnswer(q.questionId, answer.answerId)
+                                      }
+                                      variant="outline"
+                                      className="px-4 py-1.5 text-sm border-red-200 text-red-500 hover:bg-red-50"
+                                    >
+                                      삭제
+                                    </Button>
+                                  </div>
+                                </>
                               ) : (
-                                <div className="flex justify-end">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    onClick={() =>
+                                      deleteAnswer(q.questionId, answer.answerId)
+                                    }
+                                    variant="outline"
+                                    className="px-4 py-1.5 text-sm border-red-200 text-red-500 hover:bg-red-50"
+                                  >
+                                    삭제
+                                  </Button>
                                   <Button
                                     onClick={() =>
                                       generateFeedback(q.questionId, answer.answerId)

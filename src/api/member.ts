@@ -485,3 +485,16 @@ export const getAnswers = async (
   );
   return response.data;
 };
+
+/**
+ * 답변&피드백 삭제
+ * DELETE /api/v1/answers/{answerId}
+ */
+export const deleteAnswer = async (
+  answerId: number
+): Promise<ApiResponse<null>> => {
+  const response = await client.delete<ApiResponse<null>>(
+    `/api/v1/answers/${answerId}`
+  );
+  return response.data;
+};
