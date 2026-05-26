@@ -1,6 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { X, Upload } from 'lucide-react';
 import { updateProfileImage, checkNickname } from '../../api/member';
+import { withdraw } from '../../api/auth';
+import { useAuthStore } from '../../store/authStore';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -26,6 +29,8 @@ interface SettingsModalProps {
 type TabType = 'profile' | 'notification';
 
 export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: SettingsModalProps) {
+  const navigate = useNavigate();
+  const logout = useAuthStore((s) => s.logout);
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [nickname, setNickname] = useState(currentProfile.nickname);
   const [profileImage, setProfileImage] = useState(currentProfile.profileImage);
@@ -299,9 +304,16 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: Setti
               {/* 액션 버튼 - 하단 고정 */}
               <div className="pt-6 border-t border-gray-200 mt-4 flex justify-between">
                 <button
-                  onClick={() => {
-                    if (confirm('정말로 회원 탈퇴하시겠습니까?')) {
-                      console.log('Account deletion requested');
+                  onClick={async () => {
+                    if (!confirm('정말로 회원 탈퇴하시겠습니까?\n탈퇴 후 일주일 내 재가입 시 계정 복구가 가능합니다.')) return;
+                    try {
+                      const response = await withdraw();
+                      if (response.isSuccess) {
+                        logout();
+                        navigate('/login');
+                      }
+                    } catch {
+                      alert('회원 탈퇴 중 오류가 발생했습니다. 다시 시도해주세요.');
                     }
                   }}
                   className="w-32 py-2.5 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
