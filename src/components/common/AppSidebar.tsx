@@ -8,20 +8,26 @@ interface AppSidebarProps {
     email: string;
     avatar: string;
   };
+  isNotificationOpen?: boolean;
+  onNotificationClick?: () => void;
 }
 
-export function AppSidebar({ userProfile }: AppSidebarProps) {
+export function AppSidebar({
+  userProfile,
+  isNotificationOpen = false,
+  onNotificationClick,
+}: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [showInterviewPopup, setShowInterviewPopup] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
-  
+
   const navItems = [
     { id: 'home', icon: Home, label: 'Home', path: '/' },
     { id: 'analytics', icon: BarChart3, label: 'Analytics', path: '/analytics' },
     { id: 'interview', icon: MessageSquare, label: 'Interview', path: '/interview', hasPopup: true },
     { id: 'community', icon: Users, label: 'Community', path: '/community' },
-    { id: 'notifications', icon: Bell, label: 'Notifications', path: '/notifications' },
+    { id: 'notifications', icon: Bell, label: 'Notifications', path: '/notifications', isDrawer: true },
   ];
 
   const isActive = (path: string) => {
@@ -30,6 +36,9 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
     }
     if (path === '/interview') {
       return location.pathname.startsWith('/interview') || location.pathname.startsWith('/voice-interview');
+    }
+    if (path === '/notifications') {
+      return isNotificationOpen;
     }
     return location.pathname.startsWith(path);
   };
@@ -47,7 +56,7 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
   }, [showInterviewPopup]);
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-sky-200 flex flex-col shadow-sm">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-sky-200 flex flex-col shadow-sm z-50">
       {/* 로고 섹션 */}
       <div className="p-6 border-b border-sky-100">
         <div className="flex items-center gap-3">
@@ -65,6 +74,23 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
           const Icon = item.icon;
           const active = isActive(item.path);
           
+          if (item.isDrawer) {
+            return (
+              <button
+                key={item.id}
+                onClick={onNotificationClick}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  active
+                    ? 'bg-sky-100 text-sky-700'
+                    : 'text-gray-600 hover:text-sky-600 hover:bg-sky-50'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-sm flex-1 text-left">{item.label}</span>
+              </button>
+            );
+          }
+
           if (item.hasPopup) {
             return (
               <div key={item.id} className="relative" ref={popupRef}>

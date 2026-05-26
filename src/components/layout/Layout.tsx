@@ -2,6 +2,7 @@ import { Outlet } from 'react-router';
 import { useEffect, useState } from 'react';
 import { AppSidebar } from '../common/AppSidebar';
 import { getMyProfile, getProfileImage } from '../../api/member';
+import { NotificationDrawer } from '../../pages/Notification/NotificationPage';
 import defaultProfile from '../../assets/img/img_profile.svg';
 
 export function Layout() {
@@ -14,6 +15,8 @@ export function Layout() {
     email: '',
     avatar: defaultProfile,
   });
+
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -53,7 +56,15 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-sky-50">
-      <AppSidebar userProfile={userProfile} />
+      <AppSidebar
+        userProfile={userProfile}
+        isNotificationOpen={isNotifOpen}
+        onNotificationClick={() => setIsNotifOpen((v) => !v)}
+      />
+      <NotificationDrawer
+        isOpen={isNotifOpen}
+        onClose={() => setIsNotifOpen(false)}
+      />
       <main className="ml-64">
         <Outlet />
       </main>
