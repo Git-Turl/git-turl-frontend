@@ -1,0 +1,80 @@
+/* TipTap 에디터 / 게시글 본문 공통 스타일 */
+
+.rte-content {
+  outline: none;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #1f2937;
+}
+
+.rte-content p {
+  margin: 0 0 8px;
+}
+
+.rte-content h1,
+.rte-content h2,
+.rte-content h3 {
+  font-weight: 700;
+  margin: 16px 0 8px;
+}
+
+.rte-content h1 { font-size: 22px; }
+.rte-content h2 { font-size: 18px; }
+.rte-content h3 { font-size: 16px; }
+
+.rte-content ul,
+.rte-content ol {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.rte-content li {
+  margin: 2px 0;
+}
+
+.rte-content blockquote {
+  border-left: 3px solid #00AEEF;
+  padding: 4px 12px;
+  color: #4A5565;
+  margin: 8px 0;
+}
+
+.rte-content code {
+  background: #F2F2F2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+}
+
+.rte-content pre {
+  background: #1F2937;
+  color: #F9FAFB;
+  padding: 12px 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.rte-content pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.rte-content a {
+  color: #0084D1;
+  text-decoration: underline;
+}
+
+.rte-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.rte-content strong { font-weight: 700; }
+.rte-content em { font-style: italic; }
+.rte-content u { text-decoration: underline; }
+.rte-content s { text-decoration: line-through; }
