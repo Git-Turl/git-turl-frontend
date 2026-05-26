@@ -13,6 +13,11 @@ import { MyPage } from '../pages/MyPage/MyPage';
 import { MyPosts } from '../pages/MyPage/MyPosts';
 import { MyComments } from '../pages/MyPage/MyComments';
 
+// 커뮤니티
+import { CommunityList } from '../pages/Community/CommunityList';
+import { CommunityDetail } from '../pages/Community/CommunityDetail';
+import { CommunityWrite } from '../pages/Community/CommunityWrite';
+
 // 분석
 import { Analytics } from '../pages/Analysis/Analytics';
 import { AnalyticsNew } from '../pages/Analysis/AnalyticsNew';
@@ -78,6 +83,18 @@ export const router = createBrowserRouter([
       // 커뮤니티
       {
         path: 'community',
+        Component: CommunityList,
+      },
+      {
+        path: 'community/write',
+        Component: CommunityWrite,
+      },
+      {
+        path: 'community/:id',
+        Component: CommunityDetail,
+      },
+      {
+        path: 'my-posts',
         Component: MyPosts,
       },
       {
