@@ -1,20 +1,64 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Plus, Calendar, Mic } from 'lucide-react';
 import { Card } from '../../components/ui/card';
+import { getVoiceReports, type ReportSummary } from '../../api/voiceInterview';
+
+type VoiceInterviewItem = {
+  id: number;
+  repoName: string;
+  questionCount: number;
+  createdAt: string; // YYYY.MM.DD 표시용
+};
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}.${mm}.${dd}`;
+}
 
 export function VoiceInterview() {
   const [filterMode, setFilterMode] = useState<'all' | 'date'>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Mock data
-  const voiceInterviews = [
-    { id: 1, repoName: 'ecommerce-platform', questionCount: 5, createdAt: '2026.01.15' },
-    { id: 2, repoName: 'react-optimization', questionCount: 3, createdAt: '2026.01.10' },
-    { id: 3, repoName: 'graphql-api', questionCount: 4, createdAt: '2025.12.28' },
-    { id: 4, repoName: 'ml-pipeline', questionCount: 5, createdAt: '2025.12.20' },
-  ];
+  const [voiceInterviews, setVoiceInterviews] = useState<VoiceInterviewItem[]>(
+    []
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getVoiceReports()
+      .then((reports: ReportSummary[]) => {
+        if (cancelled) return;
+        // 음성 질문이 1개 이상 있는 요약본만 음성 면접 내역으로 노출
+        const items: VoiceInterviewItem[] = reports
+          .filter((r) => (r.questionCount ?? 0) > 0)
+          .map((r) => ({
+            id: r.reportId,
+            repoName: r.repoName,
+            questionCount: r.questionCount,
+            createdAt: formatDate(r.createdAt),
+          }));
+        setVoiceInterviews(items);
+      })
+      .catch(() => {
+        if (!cancelled) setError('음성 면접 내역을 불러오지 못했습니다.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredInterviews = voiceInterviews.filter((interview) => {
     if (filterMode === 'all') return true;
@@ -119,8 +163,16 @@ export function VoiceInterview() {
               </button>
             </Link>
 
-            {/* 기존 음성 면접 카드 */}
-            {filteredInterviews.length > 0 ? (
+            {/* 로딩 / 에러 / 빈 상태 / 내역 카드 */}
+            {loading ? (
+              <div className="col-span-full text-center py-12 text-gray-500">
+                불러오는 중...
+              </div>
+            ) : error ? (
+              <div className="col-span-full text-center py-12 text-red-500">
+                {error}
+              </div>
+            ) : filteredInterviews.length > 0 ? (
               filteredInterviews.map((interview) => (
                 <Link
                   key={interview.id}
@@ -154,11 +206,11 @@ export function VoiceInterview() {
                   </Card>
                 </Link>
               ))
-            ) : filterMode === 'date' && (
+            ) : filterMode === 'date' ? (
               <div className="col-span-full text-center py-12 text-gray-500">
                 해당 기간에 생성된 음성 면접 질문이 없습니다.
               </div>
-            )}
+            ) : null}
           </div>
         </Card>
       </div>
