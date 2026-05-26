@@ -11,6 +11,7 @@ import {
 } from '../../api/voiceInterview';
 import { getMockQuestions } from './mockData';
 import { useVoiceRecordingStore } from '../../store/voiceRecordingStore';
+import { encodeBlobToMp3 } from '../../utils/audioEncoder';
 
 const QUESTION_TIME = 120;
 
@@ -36,16 +37,37 @@ export function VoiceInterviewDetail() {
   // 질문 목록 조회
   useEffect(() => {
     const reportId = Number(id);
-    const mock = getMockQuestions(
-      useVoiceRecordingStore.getState().mockQuestionCount
-    );
+    const store = useVoiceRecordingStore.getState();
+    const mock = getMockQuestions(store.mockQuestionCount);
     if (!reportId) {
       setQuestions(mock);
       setIsLoading(false);
       return;
     }
     getAllVoiceQuestions(reportId)
-      .then((list) => setQuestions(list.length > 0 ? list : mock))
+      .then((list) => {
+        // 같은 레포에 과거 질문이 쌓여 있을 수 있어 이번 세션 ID로만 필터링
+        const currentIds = store.currentQuestionIds;
+        const requested = Math.max(1, Math.min(store.mockQuestionCount, 5));
+        console.log('[VoiceInterview] Detail - 전체 질문', list.length, '개, currentIds', currentIds, '선택개수', requested);
+        let filtered: typeof list;
+        if (currentIds.length > 0) {
+          filtered = list.filter((q) => currentIds.includes(q.questionId));
+        } else {
+          // 폴백: createdAt 내림차순 정렬 후 사용자가 선택한 개수만큼만
+          filtered = [...list]
+            .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+            .slice(0, requested);
+        }
+        // 사용자가 선택한 개수만큼만 표시 (백엔드가 더 많이 줘도 자름)
+        filtered = filtered.slice(0, requested);
+        // 모자라면 모크 질문으로 패딩 (백엔드가 요청 수만큼 안 줘도 화면은 N개로 채움)
+        if (filtered.length < requested) {
+          const padFromMock = getMockQuestions(requested).slice(filtered.length);
+          filtered = [...filtered, ...padFromMock];
+        }
+        setQuestions(filtered.length > 0 ? filtered : mock);
+      })
       .catch(() => setQuestions(mock)) // 백엔드 실패 시 모크 폴백
       .finally(() => setIsLoading(false));
   }, [id]);
@@ -101,14 +123,16 @@ export function VoiceInterviewDetail() {
 
         const question = questions[questionIndex];
         if (question) {
-          // 피드백 화면에서 재생할 수 있도록 스토어에 저장
+          // 피드백 화면에서 재생할 수 있도록 스토어에 저장 (재생용은 원본 webm 그대로 사용)
           useVoiceRecordingStore
             .getState()
             .setRecording(question.questionId, audioBlob);
-          // 음성 답변 저장 (백엔드)
-          saveVoiceAnswer(question.questionId, audioBlob, 'answer.webm').catch(
-            (e) => console.error('음성 답변 저장 실패', e)
-          );
+          // mp3로 변환 후 백엔드 업로드
+          encodeBlobToMp3(audioBlob)
+            .then((mp3Blob) =>
+              saveVoiceAnswer(question.questionId, mp3Blob, 'answer.mp3')
+            )
+            .catch((e) => console.error('음성 답변 저장 실패', e));
         }
       };
 
