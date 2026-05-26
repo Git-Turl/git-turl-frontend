@@ -176,7 +176,7 @@ export function VoiceInterview() {
               filteredInterviews.map((interview) => (
                 <Link
                   key={interview.id}
-                  to={`/voice-interview/detail/${interview.id}`}
+                  to={`/voice-interview/feedback/${interview.id}`}
                   className="block"
                 >
                   <Card className="h-48 p-5 border border-sky-100 hover:shadow-lg hover:border-sky-300 transition-all cursor-pointer group">
