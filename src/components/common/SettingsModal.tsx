@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Upload } from 'lucide-react';
-import { updateProfileImage } from '../../api/member';
+import { updateProfileImage, checkNickname } from '../../api/member';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -33,7 +33,7 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: Setti
   const [preferredStacks, setPreferredStacks] = useState<string[]>(currentProfile.preferredStacks || []);
   const [notificationsEnabled] = useState(currentProfile.notificationsEnabled);
   const [commentNotificationsEnabled, setCommentNotificationsEnabled] = useState(currentProfile.commentNotificationsEnabled);
-  const [nicknameChecked, setNicknameChecked] = useState(false);
+  const [nicknameStatus, setNicknameStatus] = useState<'idle' | 'checking' | 'available' | 'unavailable'>('idle');
 
   const stackCategories = {
     '백엔드': ['PHP', 'Node.js', 'Nest.js', 'SpringBoot', 'Django', 'Flask', 'FastAPI', 'Ruby on Rails', 'ASP.NET', 'Go', 'Rust'],
@@ -50,13 +50,24 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: Setti
     const value = e.target.value;
     if (value.length <= 10) {
       setNickname(value);
-      setNicknameChecked(false);
+      setNicknameStatus('idle');
     }
   };
 
-  const handleCheckNickname = () => {
-    // Mock duplicate check - 실제 앱에서는 API 호출이어야 함
-    setNicknameChecked(true);
+  const handleCheckNickname = async () => {
+    if (!nickname.trim()) return;
+    setNicknameStatus('checking');
+    try {
+      const response = await checkNickname({ nickname: nickname.trim() });
+      if (response.code === 'MEMBER200_7') {
+        setNicknameStatus('available');
+      } else {
+        setNicknameStatus('unavailable');
+      }
+    } catch {
+      setNicknameStatus('idle');
+      alert('닉네임 확인 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,7 +113,7 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: Setti
     );
   };
 
-  const isProfileValid = nickname.trim().length > 0 && nicknameChecked && techStack;
+  const isProfileValid = nickname.trim().length > 0 && nicknameStatus === 'available' && techStack;
 
   const handleSave = () => {
     if (isProfileValid) {
@@ -211,19 +222,24 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: Setti
                   />
                   <button
                     onClick={handleCheckNickname}
-                    disabled={!nickname.trim()}
+                    disabled={!nickname.trim() || nicknameStatus === 'checking'}
                     className={`px-5 py-2.5 rounded-lg transition-colors whitespace-nowrap ${
-                      nickname.trim()
+                      nickname.trim() && nicknameStatus !== 'checking'
                         ? 'bg-sky-500 hover:bg-sky-600 text-white'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                   >
-                    중복확인
+                    {nicknameStatus === 'checking' ? '확인 중...' : '중복확인'}
                   </button>
                 </div>
-                {nicknameChecked && (
+                {nicknameStatus === 'available' && (
                   <p className="text-sm text-green-600 mt-2">
                     ✓ 사용 가능한 닉네임입니다.
+                  </p>
+                )}
+                {nicknameStatus === 'unavailable' && (
+                  <p className="text-sm text-red-500 mt-2">
+                    ✗ 사용할 수 없는 닉네임입니다.
                   </p>
                 )}
               </div>

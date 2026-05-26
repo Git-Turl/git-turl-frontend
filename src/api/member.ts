@@ -183,7 +183,29 @@ export type ReportListParams = {
   answerType: 'TEXT' | 'VOICE' | 'ALL';
 };
 
+export type NicknameCheckRequest = {
+  nickname: string;
+};
+
+export type NicknameCheckResult = {
+  code: string;
+};
+
 // ========== API 호출 함수 ==========
+
+/**
+ * 닉네임 중복 확인
+ * POST /api/v1/members/nickname
+ */
+export const checkNickname = async (
+  data: NicknameCheckRequest
+): Promise<ApiResponse<null>> => {
+  const response = await client.post<ApiResponse<null>>(
+    '/api/v1/members/nickname',
+    data
+  );
+  return response.data;
+};
 
 /**
  * 프로필 정보 설정 (최초 온보딩)
