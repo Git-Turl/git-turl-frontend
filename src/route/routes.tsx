@@ -145,11 +145,6 @@ export const router = createBrowserRouter([
         path: 'voice-interview/feedback/:id',
         Component: VoiceInterviewFeedback,
       },
-      // 알림
-      {
-        path: 'notifications',
-        element: <div className="p-8"><h1 className="text-2xl">Notifications Page</h1></div>,
-      },
     ],
   },
 ]);
