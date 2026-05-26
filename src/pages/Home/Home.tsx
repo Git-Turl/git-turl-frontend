@@ -12,6 +12,7 @@ import {
   ThumbsUp,
   Bookmark,
 } from 'lucide-react';
+import { getMyProfile } from '../../api/member';
 
 type StoredUserInfo = {
   nickname?: string;
@@ -26,15 +27,38 @@ export function Home() {
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
 
   useEffect(() => {
+    // 1차: localStorage 캐시에서 빠르게 로드
     const savedInfo = localStorage.getItem('userInfo');
-    if (!savedInfo) return;
-    try {
-      const parsed = JSON.parse(savedInfo) as StoredUserInfo;
-      if (!parsed?.nickname && !parsed?.githubId && !parsed?.name) return;
-      setUserInfo(parsed);
-    } catch (e) {
-      console.error('userInfo 파싱 실패:', e);
+    if (savedInfo) {
+      try {
+        const parsed = JSON.parse(savedInfo) as StoredUserInfo;
+        if (parsed?.nickname || parsed?.githubId || parsed?.name) {
+          setUserInfo(parsed);
+        }
+      } catch (e) {
+        console.error('userInfo 파싱 실패:', e);
+      }
     }
+
+    // 2차: API에서 최신 프로필 가져와 githubId 확실히 채움
+    let cancelled = false;
+    getMyProfile()
+      .then((res) => {
+        if (cancelled) return;
+        if (!res.isSuccess || !res.result) return;
+        setUserInfo((prev) => ({
+          ...(prev ?? {}),
+          nickname: res.result?.nickname ?? prev?.nickname,
+          githubId: res.result?.githubId ?? prev?.githubId,
+          profileImage: res.result?.profileImage ?? prev?.profileImage,
+        }));
+      })
+      .catch(() => {
+        // 무시: localStorage 값이 있으면 그걸로 사용
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const githubUsername = userInfo?.githubId ?? '';
@@ -155,14 +179,16 @@ export function Home() {
         <div
           style={{
             flex: 1,
-            height: 200,
+            height: 260,
             borderRadius: 16,
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: '#0E2248',
+            background: '#F0F9FF',
+            border: '1px solid #B8E6FE',
             minWidth: 0,
+            boxSizing: 'border-box',
           }}
         >
           {githubUsername ? (
@@ -180,7 +206,7 @@ export function Home() {
               }}
             />
           ) : (
-            <span style={{ color: '#9CA3AF', fontSize: 13 }}>
+            <span style={{ color: '#6A7282', fontSize: 13 }}>
               GitHub 연동 정보가 없습니다.
             </span>
           )}
@@ -190,7 +216,7 @@ export function Home() {
         <div
           style={{
             width: 360,
-            height: 200,
+            height: 260,
             background: 'white',
             borderRadius: 16,
             padding: 18,
