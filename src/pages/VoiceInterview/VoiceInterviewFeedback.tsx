@@ -56,7 +56,27 @@ export function VoiceInterviewFeedback() {
     (async () => {
       try {
         const questions = await getAllVoiceQuestions(reportId);
-        const list = questions.length > 0 ? questions : mockQuestions;
+        // 같은 레포에 과거 질문이 누적돼 있을 수 있어 이번 세션 ID로만 필터링
+        const store = useVoiceRecordingStore.getState();
+        const currentIds = store.currentQuestionIds;
+        const requested = Math.max(1, Math.min(store.mockQuestionCount, 5));
+        let scoped: typeof questions;
+        if (currentIds.length > 0) {
+          scoped = questions.filter((q) => currentIds.includes(q.questionId));
+        } else {
+          // 폴백: 최신순 정렬 후 사용자가 선택한 개수만큼만
+          scoped = [...questions]
+            .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+            .slice(0, requested);
+        }
+        // 사용자가 선택한 개수만큼만 표시
+        scoped = scoped.slice(0, requested);
+        // 모자라면 모크로 패딩 (백엔드가 요청 수만큼 안 줘도 화면은 N개로 채움)
+        if (scoped.length < requested) {
+          const padFromMock = getMockQuestions(requested).slice(scoped.length);
+          scoped = [...scoped, ...padFromMock];
+        }
+        const list = scoped.length > 0 ? scoped : mockQuestions;
         const items = await Promise.all(
           list.map(async (q) => {
             try {

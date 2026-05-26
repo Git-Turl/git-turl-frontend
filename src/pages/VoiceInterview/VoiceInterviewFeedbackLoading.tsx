@@ -1,22 +1,115 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { Loader2 } from 'lucide-react';
 import { Card } from '../../components/ui/card';
+import { getVoiceAnswer, type VoiceAnswer } from '../../api/voiceInterview';
+import { useVoiceRecordingStore } from '../../store/voiceRecordingStore';
+
+const POLL_INTERVAL_MS = 5000; // 5초 간격
+const MAX_POLL_DURATION_MS = 6 * 60 * 1000; // 최대 6분 대기
+
+// 백엔드 분석이 끝났는지 판정.
+// - status가 'DONE'/'COMPLETED'면 완료
+// - status 정보 없어도 content + feedback이 둘 다 채워졌으면 완료로 간주
+function isAnswerReady(answer: VoiceAnswer | null | undefined): boolean {
+  if (!answer) return false;
+  const status = (answer.status || '').toUpperCase();
+  if (status === 'DONE' || status === 'COMPLETED') return true;
+  return !!(answer.content?.trim() && answer.feedback?.trim());
+}
 
 export function VoiceInterviewFeedbackLoading() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { completedCount = 0, totalCount = 5, interviewId = '1' } = location.state || {};
+  const {
+    completedCount = 0,
+    totalCount = 5,
+    interviewId = '1',
+  } = location.state || {};
 
-  const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const questionIds = useVoiceRecordingStore((s) => s.currentQuestionIds);
+  const [readyCount, setReadyCount] = useState(0);
+  const [elapsedSec, setElapsedSec] = useState(0);
+
+  const cancelledRef = useRef(false);
+  const startTimeRef = useRef<number>(Date.now());
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate(`/voice-interview/feedback/${interviewId}`);
-    }, 3000);
+    cancelledRef.current = false;
+    startTimeRef.current = Date.now();
 
-    return () => clearTimeout(timer);
-  }, [navigate, interviewId]);
+    // 녹음 세션 ID가 없으면 (mock 모드 등) 짧게 기다렸다 그냥 이동
+    if (questionIds.length === 0) {
+      const t = setTimeout(() => {
+        navigate(`/voice-interview/feedback/${interviewId}`);
+      }, 1500);
+      return () => clearTimeout(t);
+    }
+
+    const readyIds = new Set<number>();
+
+    const checkAll = async () => {
+      if (cancelledRef.current) return;
+
+      const elapsed = Date.now() - startTimeRef.current;
+      if (elapsed > MAX_POLL_DURATION_MS) {
+        alert(
+          '피드백 생성이 오래 걸리고 있습니다. 잠시 후 목록에서 다시 확인해주세요.'
+        );
+        navigate(`/voice-interview/feedback/${interviewId}`);
+        return;
+      }
+
+      // 아직 ready 안 된 질문만 폴링
+      const pending = questionIds.filter((qid) => !readyIds.has(qid));
+      await Promise.all(
+        pending.map(async (qid) => {
+          try {
+            const res = await getVoiceAnswer(qid);
+            if (res.isSuccess && isAnswerReady(res.result)) {
+              readyIds.add(qid);
+            }
+          } catch {
+            // 분석 중 404/5xx 가능 — 다음 폴에서 재시도
+          }
+        })
+      );
+
+      if (cancelledRef.current) return;
+      setReadyCount(readyIds.size);
+
+      if (readyIds.size === questionIds.length) {
+        // 전부 완료 → 피드백 페이지로 이동
+        navigate(`/voice-interview/feedback/${interviewId}`);
+        return;
+      }
+
+      setTimeout(checkAll, POLL_INTERVAL_MS);
+    };
+
+    const tickTimer = setInterval(() => {
+      if (cancelledRef.current) return;
+      setElapsedSec(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    }, 1000);
+
+    checkAll();
+
+    return () => {
+      cancelledRef.current = true;
+      clearInterval(tickTimer);
+    };
+  }, [questionIds, navigate, interviewId]);
+
+  const handleSkip = () => {
+    cancelledRef.current = true;
+    navigate(`/voice-interview/feedback/${interviewId}`);
+  };
+
+  // 진행률 계산 — 폴링 중이면 폴링 기준, 녹음 ID 없으면 기존 답변 완료율 사용
+  const totalForBar = questionIds.length > 0 ? questionIds.length : totalCount;
+  const doneForBar = questionIds.length > 0 ? readyCount : completedCount;
+  const completionRate =
+    totalForBar > 0 ? Math.round((doneForBar / totalForBar) * 100) : 0;
 
   return (
     <div className="min-h-screen p-8 bg-[#F0F9FF]">
@@ -37,9 +130,14 @@ export function VoiceInterviewFeedbackLoading() {
 
               {/* Loading Text */}
               <div>
-                <p className="text-xl text-gray-900 mb-4 font-medium">피드백 생성 중...</p>
-                <p className="text-sm text-gray-500 mb-6">
-                  면접 질문은 최대 5분이 걸릴 수 있습니다.
+                <p className="text-xl text-gray-900 mb-4 font-medium">
+                  피드백 생성 중...
+                </p>
+                <p className="text-sm text-gray-500 mb-2">
+                  음성 분석은 최대 5분이 걸릴 수 있습니다.
+                </p>
+                <p className="text-xs text-gray-400">
+                  경과 시간: {elapsedSec}초
                 </p>
               </div>
 
@@ -47,14 +145,20 @@ export function VoiceInterviewFeedbackLoading() {
               <div className="w-full pt-6 border-t border-gray-200">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">답변 완료</span>
+                    <span className="text-sm text-gray-600">
+                      {questionIds.length > 0
+                        ? '분석 완료'
+                        : '답변 완료'}
+                    </span>
                     <span className="text-sm font-medium text-gray-900">
-                      {completedCount} / {totalCount}개
+                      {doneForBar} / {totalForBar}개
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">답변 완료율</span>
-                    <span className="text-sm font-medium text-sky-700">{completionRate}%</span>
+                    <span className="text-sm text-gray-600">진행률</span>
+                    <span className="text-sm font-medium text-sky-700">
+                      {completionRate}%
+                    </span>
                   </div>
 
                   {/* Progress Bar */}
@@ -66,6 +170,14 @@ export function VoiceInterviewFeedbackLoading() {
                   </div>
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="text-sm text-sky-600 hover:underline"
+              >
+                지금 결과 보기 (분석 미완료 상태로 이동)
+              </button>
             </div>
           </Card>
         </div>

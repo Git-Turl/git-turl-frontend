@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Check, FileText } from 'lucide-react';
+import { ArrowLeft, Check, FileText, FilePlus, Plus } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import {
@@ -32,8 +32,8 @@ export function VoiceInterviewNew() {
 
   useEffect(() => {
     getVoiceReports()
-      .then((list) => setReports(list.length > 0 ? list : [MOCK_REPORT]))
-      .catch(() => setReports([MOCK_REPORT]))
+      .then((list) => setReports(list))
+      .catch(() => setReports([MOCK_REPORT])) // 네트워크 실패 시에만 모크
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -59,14 +59,22 @@ export function VoiceInterviewNew() {
     if (selectedReportId == null) return;
     setGenerating(true);
     // 모크 모드에서 선택한 질문 개수를 상세/피드백 화면에 반영하기 위해 저장
-    useVoiceRecordingStore.getState().setMockQuestionCount(questionCount);
+    const store = useVoiceRecordingStore.getState();
+    store.setMockQuestionCount(questionCount);
+    // 새 세션이므로 이전에 누적된 ID 목록은 비움
+    store.setCurrentQuestionIds([]);
     try {
-      await generateQuestions(selectedReportId, {
-        questionCount,
-        answerType: 'VOICE',
-      });
-    } catch {
+      const reqBody = { questionCount, answerType: 'VOICE' as const };
+      console.log('[VoiceInterview] generateQuestions REQUEST', reqBody);
+      const res = await generateQuestions(selectedReportId, reqBody);
+      console.log('[VoiceInterview] generateQuestions RESPONSE', res);
+      const ids = res.result?.questionIdList ?? [];
+      console.log('[VoiceInterview] questionIdList', ids, '(요청 개수:', questionCount, ')');
+      // 사용자가 선택한 개수만큼만 저장 (백엔드가 더 많이 줘도 자름)
+      store.setCurrentQuestionIds(ids.slice(0, questionCount));
+    } catch (e) {
       // 백엔드 실패 시에도 모크 모드로 흐름을 이어감
+      console.error('[VoiceInterview] generateQuestions FAILED', e);
     }
     navigate('/voice-interview/loading', {
       state: { reportId: selectedReportId },
@@ -176,7 +184,28 @@ export function VoiceInterviewNew() {
             {isLoading ? (
               <div className="py-16 text-center text-gray-500">요약본을 불러오는 중...</div>
             ) : filteredReports.length === 0 ? (
-              <div className="py-16 text-center text-gray-500">조회된 요약본이 없습니다.</div>
+              <div className="py-16 flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 rounded-full bg-sky-100 flex items-center justify-center mb-4">
+                  <FilePlus className="w-8 h-8 text-sky-600" />
+                </div>
+                <p className="text-gray-700 font-medium mb-1">
+                  {reports.length === 0
+                    ? '등록된 레포지토리 분석본이 없습니다'
+                    : '조회된 요약본이 없습니다'}
+                </p>
+                <p className="text-sm text-gray-500 mb-6">
+                  {reports.length === 0
+                    ? '음성 면접을 시작하려면 먼저 레포지토리를 분석해주세요'
+                    : '필터를 변경하거나 새 분석본을 만들어보세요'}
+                </p>
+                <Button
+                  onClick={() => navigate('/analytics/new')}
+                  className="px-6 py-2 bg-sky-600 text-white hover:bg-sky-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  레포지토리 분석본 만들기
+                </Button>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 {filteredReports.map((report) => (
@@ -213,6 +242,20 @@ export function VoiceInterviewNew() {
                     </div>
                   </button>
                 ))}
+
+                {/* 항상 마지막에 "새 분석본 만들기" 카드 */}
+                <button
+                  onClick={() => navigate('/analytics/new')}
+                  className="p-5 border-2 border-dashed border-sky-300 rounded-xl text-left transition-all hover:border-sky-500 hover:bg-sky-50 flex items-center gap-3"
+                >
+                  <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center flex-shrink-0">
+                    <Plus className="w-5 h-5 text-sky-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-sky-700 mb-1">새 분석본 만들기</h3>
+                    <p className="text-xs text-gray-500">레포지토리를 새로 분석합니다</p>
+                  </div>
+                </button>
               </div>
             )}
 
