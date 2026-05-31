@@ -128,10 +128,18 @@ export type Features = {
   feature5: FeatureDetail;
 };
 
+export type ImprovementDetail = {
+  title: string;
+  files: string[] | null;
+  currentStatus: string;
+  example: string;
+  actionPlan: string;
+};
+
 export type Improvements = {
-  improvement1: FeatureDetail;
-  improvement2: FeatureDetail;
-  improvement3: FeatureDetail;
+  improvement1: ImprovementDetail;
+  improvement2: ImprovementDetail;
+  improvement3: ImprovementDetail;
 };
 
 export type Content = {
