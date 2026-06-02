@@ -239,6 +239,11 @@ export function VoiceInterviewDetail() {
       passVoiceAnswer(question.questionId).catch((e) =>
         console.error('답변 패스 실패', e)
       );
+      // 패스된 질문은 피드백 로딩 폴링 대상에서 제거
+      const store = useVoiceRecordingStore.getState();
+      store.setCurrentQuestionIds(
+        store.currentQuestionIds.filter((id) => id !== question.questionId)
+      );
     }
     handleNext();
   };
@@ -260,7 +265,6 @@ export function VoiceInterviewDetail() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl text-gray-900 mb-2">음성 면접</h1>
-          <p className="text-gray-600">ecommerce-platform</p>
         </div>
 
         <div className="flex gap-5 items-start">

@@ -303,7 +303,7 @@ export function AnalyticsDetail() {
                         <p className="text-sm text-sky-600">내 커밋</p>
                       </div>
                       <div className="bg-green-50 p-4 rounded-lg text-center">
-                        <p className="text-2xl font-bold text-green-900">{analysisData.content.content.commitStats.myCommitRate}%</p>
+                        <p className="text-2xl font-bold text-green-900">{(analysisData.content.content.commitStats.myCommitRate * 100).toFixed(1)}%</p>
                         <p className="text-sm text-green-600">기여도</p>
                       </div>
                     </div>
@@ -378,7 +378,24 @@ export function AnalyticsDetail() {
                               </div>
                             </div>
                           )}
-                          <p className="text-sm text-gray-700">{improvement.content}</p>
+                          {improvement.currentStatus && (
+                            <div className="mb-2">
+                              <p className="text-sm font-medium text-gray-700 mb-1">현재 상태:</p>
+                              <p className="text-sm text-gray-700">{improvement.currentStatus}</p>
+                            </div>
+                          )}
+                          {improvement.example && (
+                            <div className="mb-2">
+                              <p className="text-sm font-medium text-gray-700 mb-1">예시:</p>
+                              <p className="text-sm text-gray-700">{improvement.example}</p>
+                            </div>
+                          )}
+                          {improvement.actionPlan && (
+                            <div>
+                              <p className="text-sm font-medium text-gray-700 mb-1">개선 계획:</p>
+                              <p className="text-sm text-gray-700">{improvement.actionPlan}</p>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
