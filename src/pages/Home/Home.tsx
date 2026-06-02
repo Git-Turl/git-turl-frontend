@@ -9,10 +9,35 @@ import {
   UserPlus,
   GitBranch,
   MessageSquare,
-  ThumbsUp,
+  Calendar,
   Bookmark,
 } from 'lucide-react';
-import { getMyProfile } from '../../api/member';
+import { Link } from 'react-router';
+import {
+  getMyHistory,
+  getMyProfile,
+  getReportList,
+  type GitTurlHistory,
+  type ReportListItem,
+} from '../../api/member';
+import gitturlLogo from '../../assets/logo/gitturl-logo.svg';
+
+// "2026-04-08T01:40:00" → "4시간 전" 형식 상대시각.
+const relativeTime = (iso: string): string => {
+  const past = new Date(iso).getTime();
+  if (Number.isNaN(past)) return '';
+  const diffMin = Math.floor((Date.now() - past) / 60000);
+  if (diffMin < 1) return '방금 전';
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const hours = Math.floor(diffMin / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return '하루 전';
+  if (days < 7) return `${days}일 전`;
+  if (days < 30) return `${Math.floor(days / 7)}주 전`;
+  if (days < 365) return `${Math.floor(days / 30)}달 전`;
+  return `${Math.floor(days / 365)}년 전`;
+};
 
 type StoredUserInfo = {
   nickname?: string;
@@ -25,6 +50,39 @@ type StoredUserInfo = {
 
 export function Home() {
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
+  const [history, setHistory] = useState<GitTurlHistory | null>(null);
+  const [recentReports, setRecentReports] = useState<ReportListItem[]>([]);
+
+  useEffect(() => {
+    // 깃털 히스토리 조회 — 일수 / 분석 리포트 / 면접 질문 카운트
+    let cancelledHistory = false;
+    getMyHistory()
+      .then((res) => {
+        if (cancelledHistory) return;
+        if (res.isSuccess && res.result) setHistory(res.result);
+      })
+      .catch((err) => {
+        console.error('[home] history load failed', err);
+      });
+
+    // 최근 활동 — 분석 리포트 최근 5건
+    let cancelledReports = false;
+    getReportList({ answerType: 'ALL', pageSize: 5 })
+      .then((res) => {
+        if (cancelledReports) return;
+        if (res.isSuccess && res.result?.data) {
+          setRecentReports(res.result.data);
+        }
+      })
+      .catch((err) => {
+        console.error('[home] recent reports load failed', err);
+      });
+
+    return () => {
+      cancelledHistory = true;
+      cancelledReports = true;
+    };
+  }, []);
 
   useEffect(() => {
     // 1차: localStorage 캐시에서 빠르게 로드
@@ -102,56 +160,40 @@ export function Home() {
     },
   ];
 
+  // 모두 history API 에서 받아온 실데이터.
   const stats = [
     {
       icon: GitBranch,
       iconBg: '#EDF3FE',
       iconColor: '#578EFE',
       label: '분석한 레포지터리',
-      count: 9,
-      change: '+1',
+      count: history?.githubReportCount ?? 0,
     },
     {
       icon: MessageSquare,
       iconBg: '#F3F0FD',
       iconColor: '#854DDA',
       label: '생성한 면접 질문',
-      count: 48,
-      change: '+12',
+      count: history?.interviewQuestionCount ?? 0,
     },
     {
-      icon: ThumbsUp,
+      icon: Calendar,
       iconBg: '#FEF7E6',
       iconColor: '#FECA3F',
-      label: '피드백 받은 횟수',
-      count: 56,
-      change: '+15',
+      label: '함께한 일수',
+      count: history?.daysWthGitTurl ?? 0,
     },
   ];
 
-  const recentActivities = [
-    {
-      icon: GitBranch,
-      iconBg: '#EDF3FE',
-      iconColor: '#578EFE',
-      title: 'git-turl 레포지터리를 분석했어요',
-      time: '4시간 전',
-    },
-    {
-      icon: ThumbsUp,
-      iconBg: '#FEF7E6',
-      iconColor: '#FECA3F',
-      title: 'test1 답변 피드백을 받았어요',
-      time: '하루 전',
-    },
-    {
-      icon: MessageSquare,
-      iconBg: '#F3F0FD',
-      iconColor: '#854DDA',
-      title: 'test1 면접 질문을 생성했어요',
-      time: '하루 전',
-    },
-  ];
+  // 최근 활동 — 현재 연동된 백엔드 API 중 분석 리포트 목록을 사용.
+  // 추후 글/음성·텍스트 면접 활동까지 합치려면 백엔드 통합 엔드포인트 필요.
+  const recentActivities = recentReports.slice(0, 3).map((r) => ({
+    icon: GitBranch,
+    iconBg: '#EDF3FE',
+    iconColor: '#578EFE',
+    title: `${r.reportTitle || r.repoName || '레포지터리'}를 분석했어요`,
+    time: relativeTime(r.createdAt),
+  }));
 
   return (
     <div
@@ -238,16 +280,18 @@ export function Home() {
               style={{
                 width: 90,
                 height: 90,
-                background: '#D9D9D9',
                 borderRadius: 16,
                 flexShrink: 0,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 32,
               }}
             >
-              🪶
+              <img
+                src={gitturlLogo}
+                alt="깃털"
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
@@ -258,7 +302,7 @@ export function Home() {
                   marginBottom: 6,
                 }}
               >
-                깃털과 함께한 지 15일!
+                깃털과 함께한 지 {history?.daysWthGitTurl ?? 0}일!
               </div>
               <div
                 style={{
@@ -567,15 +611,6 @@ export function Home() {
                           개
                         </span>
                       </div>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: '#808080',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {stat.change} (이번 주)
-                      </div>
                     </div>
                   </div>
                 );
@@ -609,25 +644,36 @@ export function Home() {
               >
                 최근 활동
               </div>
-              <button
+              <Link
+                to="/analytics"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 3,
                   color: '#828282',
                   fontSize: 12,
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
+                  textDecoration: 'none',
                 }}
               >
                 모두 보기
                 <ChevronRight size={14} />
-              </button>
+              </Link>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {recentActivities.map((activity, idx) => {
+            {recentActivities.length === 0 ? (
+              <div
+                style={{
+                  padding: '24px 0',
+                  textAlign: 'center',
+                  color: '#9CA3AF',
+                  fontSize: 13,
+                }}
+              >
+                아직 활동이 없어요.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {recentActivities.map((activity, idx) => {
                 const Icon = activity.icon;
                 return (
                   <div
@@ -671,7 +717,8 @@ export function Home() {
                   </div>
                 );
               })}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

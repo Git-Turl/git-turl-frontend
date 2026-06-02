@@ -64,6 +64,8 @@ export type ProfileRequest = {
 };
 
 export type MyProfile = {
+  // 백엔드가 응답에 id 를 포함하면 채워짐 (작성자 본인 판별에 사용).
+  id?: number;
   nickname: string;
   profileImage: string;
   jobType: JobType;
@@ -250,6 +252,53 @@ export const updateProfile = async (
 export const getMyProfile = async (): Promise<ApiResponse<MyProfile>> => {
   const response = await client.get<ApiResponse<MyProfile>>(
     '/api/v1/members/me/profile'
+  );
+  return response.data;
+};
+
+/**
+ * 타인 프로필 조회 (memberId 기반)
+ * GET /api/v1/members/{memberId}/profile
+ */
+export const getMemberProfile = async (
+  memberId: number
+): Promise<ApiResponse<MyProfile>> => {
+  const response = await client.get<ApiResponse<MyProfile>>(
+    `/api/v1/members/${memberId}/profile`
+  );
+  return response.data;
+};
+
+/**
+ * 타인 프로필 조회 (nickname 기반)
+ * GET /api/v1/members/by-nickname/{nickname}/profile
+ * - 닉네임은 백엔드가 unique 보장.
+ * - 응답 스키마는 MyProfile 과 동일.
+ * - path 가 백엔드 실제 경로와 다르면 이 한 줄만 수정.
+ */
+export const getMemberProfileByNickname = async (
+  nickname: string
+): Promise<ApiResponse<MyProfile>> => {
+  const response = await client.get<ApiResponse<MyProfile>>(
+    `/api/v1/members/by-nickname/${encodeURIComponent(nickname)}/profile`
+  );
+  return response.data;
+};
+
+// 깃털 히스토리 (서버 필드명 daysWthGitTurl 그대로 사용 — typo 가능성 있음)
+export type GitTurlHistory = {
+  daysWthGitTurl: number;
+  githubReportCount: number;
+  interviewQuestionCount: number;
+};
+
+/**
+ * 깃털 히스토리 조회
+ * GET /api/v1/members/me/history
+ */
+export const getMyHistory = async (): Promise<ApiResponse<GitTurlHistory>> => {
+  const response = await client.get<ApiResponse<GitTurlHistory>>(
+    '/api/v1/members/me/history'
   );
   return response.data;
 };

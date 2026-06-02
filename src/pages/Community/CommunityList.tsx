@@ -14,8 +14,50 @@ import {
   getBoardList,
   type BoardListItem,
   type BoardType,
+  type BoardSort,
+  type StudyTag,
+  type ProjectStatus,
+  type TechField,
+  type PlatformType,
 } from '../../api/community';
 import { getRecruitStatus } from '../../utils/localBoardStatus';
+import { AuthorLink } from '../../components/common/AuthorLink';
+
+// 필터 옵션 정의 (label = 한글 표시, value = 백엔드 enum)
+type Option<T extends string> = { label: string; value: T };
+
+const sortOptions: Option<BoardSort>[] = [
+  { label: '최신순', value: 'LATEST' },
+  { label: '좋아요순', value: 'LIKE' },
+];
+
+const studyTagOptions: Option<StudyTag | ''>[] = [
+  { label: '전체', value: '' },
+  { label: '자격증', value: 'CERTIFICATE' },
+  { label: '코딩테스트', value: 'CODING_TEST' },
+  { label: '어학', value: 'LANGUAGE' },
+];
+
+const projectStatusOptions: Option<ProjectStatus | ''>[] = [
+  { label: '전체', value: '' },
+  { label: '모집중', value: 'RECRUITING' },
+  { label: '모집완료', value: 'CLOSED' },
+];
+
+const techFieldOptions: Option<TechField | ''>[] = [
+  { label: '전체', value: '' },
+  { label: '백엔드', value: 'BACKEND' },
+  { label: '프론트엔드', value: 'FRONTED' },
+  { label: 'AI', value: 'AI' },
+  { label: '기타', value: 'ETC' },
+];
+
+const platformTypeOptions: Option<PlatformType | ''>[] = [
+  { label: '전체', value: '' },
+  { label: '웹', value: 'WEB' },
+  { label: '앱', value: 'APP' },
+  { label: '기타', value: 'ETC' },
+];
 
 type TabType = 'study' | 'project' | 'free';
 
@@ -29,6 +71,13 @@ const boardTypeLabel: Record<BoardType, string> = {
   STUDY: '스터디',
   PROJECT: '프로젝트',
   FORUM: '자유',
+};
+
+// 스터디 태그 enum → 한글 라벨
+const studyTagLabel: Record<StudyTag, string> = {
+  LANGUAGE: '어학',
+  CERTIFICATE: '자격증',
+  CODING_TEST: '코딩테스트',
 };
 
 function formatDate(iso: string): string {
@@ -47,6 +96,31 @@ function isNewPost(iso: string): boolean {
   if (isNaN(d)) return false;
   return Date.now() - d < 24 * 60 * 60 * 1000;
 }
+
+// ⚠️ 시연용 목업 — 백엔드 응답에 작성자 id 추가되면 제거.
+// 클릭 시 /profile/{writerName} 로 이동하는 흐름 검증용.
+// boardId 는 백엔드 PK 와 충돌 안 나게 큰 음수 사용. 게시글 자체를 클릭하면
+// 상세 페이지가 404 일 수 있으니 시연에서는 작성자 이름만 클릭.
+const MOCK_AUTHOR_POSTS: Omit<BoardListItem, 'boardType'>[] = [
+  {
+    boardId: -10001,
+    title: '타인 프로필 확인용',
+    content: '<p>타인 프로필 확인용 게시글 작성합니다.</p>',
+    imageUrl: null,
+    writerName: 'jeongkyueun',
+    likeCount: 0,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    boardId: -10002,
+    title: '타인 프로필 확인용',
+    content: '<p>타인 프로필 확인용 게시글 작성합니다.</p>',
+    imageUrl: null,
+    writerName: 'siuoo0819',
+    likeCount: 0,
+    createdAt: new Date().toISOString(),
+  },
+];
 
 // HTML 태그 제거 후 텍스트 미리보기용으로 변환
 function stripHtml(html: string): string {
@@ -67,8 +141,12 @@ export function CommunityList() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1); // UI: 1-indexed, API: 0-indexed
 
-  // 현재 백엔드는 sort/category/status 쿼리를 지원하지 않으므로 로컬 UI 상태로만 유지
-  const [sortBy, setSortBy] = useState('최신순');
+  // 백엔드 필터 (탭별로 적용되는 항목이 다름. 빈 문자열 = 미적용)
+  const [sort, setSort] = useState<BoardSort>('LATEST');
+  const [studyTag, setStudyTag] = useState<StudyTag | ''>('');
+  const [projectStatus, setProjectStatus] = useState<ProjectStatus | ''>('');
+  const [techField, setTechField] = useState<TechField | ''>('');
+  const [platformType, setPlatformType] = useState<PlatformType | ''>('');
 
   const [posts, setPosts] = useState<BoardListItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -85,22 +163,44 @@ export function CommunityList() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    getBoardList({ page: page - 1, boardType: tabToBoardType[activeTab] })
+    getBoardList({
+      page: page - 1,
+      boardType: tabToBoardType[activeTab],
+      sort,
+      // 탭별로 의미 있는 필터만 전송 (빈 값은 undefined 처리되어 쿼리에서 제외됨)
+      ...(activeTab === 'study' && studyTag ? { studyTag } : {}),
+      ...(activeTab !== 'free' && projectStatus ? { projectStatus } : {}),
+      ...(activeTab === 'project' && techField ? { techField } : {}),
+      ...(activeTab === 'project' && platformType ? { platformType } : {}),
+    })
       .then((res) => {
         if (cancelled) return;
+        // 활성 탭에 맞춰 목업 게시글 boardType 동적 설정 → 탭 필터와 일관.
+        const currentType = tabToBoardType[activeTab];
+        const mocks: BoardListItem[] = MOCK_AUTHOR_POSTS.map((m) => ({
+          ...m,
+          boardType: currentType,
+        }));
         if (res.isSuccess && res.result) {
-          setPosts(res.result.boardList ?? []);
+          // 첫 페이지일 때만 상단에 목업 prepend (시연용)
+          const real = res.result.boardList ?? [];
+          setPosts(page === 1 ? [...mocks, ...real] : real);
           setTotalPages(Math.max(1, res.result.totalPage ?? 1));
         } else {
           setError(res.message || '게시글을 불러오지 못했습니다.');
-          setPosts([]);
+          setPosts(page === 1 ? mocks : []);
           setTotalPages(1);
         }
       })
       .catch(() => {
         if (cancelled) return;
         setError('게시글을 불러오지 못했습니다.');
-        setPosts([]);
+        const currentType = tabToBoardType[activeTab];
+        const mocks: BoardListItem[] = MOCK_AUTHOR_POSTS.map((m) => ({
+          ...m,
+          boardType: currentType,
+        }));
+        setPosts(page === 1 ? mocks : []);
         setTotalPages(1);
       })
       .finally(() => {
@@ -109,11 +209,15 @@ export function CommunityList() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, page]);
+  }, [activeTab, page, sort, studyTag, projectStatus, techField, platformType]);
 
-  // 탭 변경 시 페이지 1로 초기화
+  // 탭 변경 시 페이지 + 탭별 필터 초기화
   useEffect(() => {
     setPage(1);
+    setStudyTag('');
+    setProjectStatus('');
+    setTechField('');
+    setPlatformType('');
   }, [activeTab]);
 
   // 검색은 백엔드 미지원 → 클라이언트 사이드 필터 (현재 페이지 결과 내)
@@ -264,12 +368,44 @@ export function CommunityList() {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <FilterDropdown
-              value={sortBy}
-              options={['최신순', '좋아요순']}
-              onChange={setSortBy}
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+            <EnumDropdown
+              value={sort}
+              options={sortOptions}
+              onChange={setSort}
             />
+            {activeTab === 'study' && (
+              <EnumDropdown
+                value={studyTag}
+                options={studyTagOptions}
+                onChange={setStudyTag}
+                placeholder="태그"
+              />
+            )}
+            {activeTab !== 'free' && (
+              <EnumDropdown
+                value={projectStatus}
+                options={projectStatusOptions}
+                onChange={setProjectStatus}
+                placeholder="모집상태"
+              />
+            )}
+            {activeTab === 'project' && (
+              <>
+                <EnumDropdown
+                  value={techField}
+                  options={techFieldOptions}
+                  onChange={setTechField}
+                  placeholder="분야"
+                />
+                <EnumDropdown
+                  value={platformType}
+                  options={platformTypeOptions}
+                  onChange={setPlatformType}
+                  placeholder="플랫폼"
+                />
+              </>
+            )}
           </div>
         </div>
 
@@ -380,14 +516,17 @@ export function CommunityList() {
   );
 }
 
-function FilterDropdown({
+// 백엔드 enum 값을 그대로 다루는 드롭다운 (label/value 분리)
+function EnumDropdown<T extends string>({
   value,
   options,
   onChange,
+  placeholder,
 }: {
-  value: string;
-  options: string[];
-  onChange: (v: string) => void;
+  value: T;
+  options: Array<{ label: string; value: T }>;
+  onChange: (v: T) => void;
+  placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -402,6 +541,9 @@ function FilterDropdown({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
+
+  const currentLabel =
+    options.find((o) => o.value === value)?.label ?? placeholder ?? '선택';
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -423,7 +565,7 @@ function FilterDropdown({
           justifyContent: 'space-between',
         }}
       >
-        {value}
+        {currentLabel}
         <ChevronDown
           size={14}
           color="#9CA3AF"
@@ -449,12 +591,12 @@ function FilterDropdown({
           }}
         >
           {options.map((opt) => {
-            const selected = opt === value;
+            const selected = opt.value === value;
             return (
               <button
-                key={opt}
+                key={opt.value || '__empty__'}
                 onClick={() => {
-                  onChange(opt);
+                  onChange(opt.value);
                   setOpen(false);
                 }}
                 style={{
@@ -471,7 +613,7 @@ function FilterDropdown({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {opt}
+                {opt.label}
               </button>
             );
           })}
@@ -579,7 +721,14 @@ function PostRow({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Pill text={`#${boardTypeLabel[post.boardType]}`} filled />
+          {(() => {
+            // 스터디 게시판이면 studyTag(자격증/코딩테스트/어학) 표시, 없으면 boardType
+            const pillText =
+              post.boardType === 'STUDY' && post.studyTag
+                ? studyTagLabel[post.studyTag]
+                : boardTypeLabel[post.boardType];
+            return <Pill text={`#${pillText}`} filled />;
+          })()}
           {(() => {
             const status = getRecruitStatus(post.boardId);
             if (!status) return null;
@@ -605,9 +754,11 @@ function PostRow({
             <Heart size={14} />
             <span>{post.likeCount}</span>
           </div>
-          <div style={{ color: '#828282', fontSize: 13 }}>
-            {post.writerName}
-          </div>
+          <AuthorLink writerName={post.writerName}>
+            <div style={{ color: '#828282', fontSize: 13 }}>
+              {post.writerName}
+            </div>
+          </AuthorLink>
           <div style={{ color: '#828282', fontSize: 13 }}>
             {formatDate(post.createdAt)}
           </div>

@@ -25,6 +25,12 @@ export function Layout() {
         const profileResponse = await getMyProfile();
         const profileData = profileResponse.result;
 
+        // 내 닉네임 저장 — 작성자 본인 여부 판별에 사용.
+        // (백엔드가 id 응답에 안 내려줘서 닉네임으로 비교)
+        if (profileData?.nickname) {
+          localStorage.setItem('myNickname', profileData.nickname);
+        }
+
         // 프로필 이미지 조회
         let imageUrl = defaultProfile;
         try {
