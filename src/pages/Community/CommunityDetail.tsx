@@ -15,11 +15,15 @@ import {
   deleteComment,
   getBoardDetail,
   getComments,
+  toggleBoardLike,
+  toggleCommentLike,
+  updateComment,
   type BoardDetail,
   type BoardType,
   type Comment,
 } from '../../api/community';
 import { getRecruitStatus } from '../../utils/localBoardStatus';
+import { AuthorLink } from '../../components/common/AuthorLink';
 import '../../components/RichTextEditor/editor.css';
 
 const boardTypeLabel: Record<BoardType, string> = {
@@ -51,6 +55,7 @@ export function CommunityDetail() {
 
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [likeBusy, setLikeBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const [comments, setComments] = useState<Comment[]>([]);
@@ -134,8 +139,7 @@ export function CommunityDetail() {
 
   const handleEdit = () => {
     setMenuOpen(false);
-    // TODO: 수정 모드 라우팅 (예: /community/write?id=...) 구현 시 연결
-    navigate('/community/write');
+    navigate(`/community/write?id=${postId}`);
   };
 
   const handleDelete = async () => {
@@ -213,6 +217,62 @@ export function CommunityDetail() {
       }
     } catch {
       alert('삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleUpdateComment = async (
+    commentId: number,
+    content: string,
+    isSecret = false
+  ): Promise<boolean> => {
+    if (!content.trim()) return false;
+    try {
+      const res = await updateComment(commentId, {
+        content: content.trim(),
+        isSecret,
+      });
+      if (res.isSuccess) {
+        loadComments(commentPage);
+        return true;
+      }
+      alert(res.message || '댓글 수정에 실패했습니다.');
+      return false;
+    } catch {
+      alert('댓글 수정 중 오류가 발생했습니다.');
+      return false;
+    }
+  };
+
+  const handleToggleCommentLike = async (commentId: number) => {
+    // 낙관적 업데이트: 응답 오면 서버 값으로 교체
+    setComments((prev) =>
+      prev.map((c) =>
+        c.commentId === commentId
+          ? {
+              ...c,
+              isLiked: !c.isLiked,
+              likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1,
+            }
+          : c
+      )
+    );
+    try {
+      const res = await toggleCommentLike(commentId);
+      if (res.isSuccess && res.result) {
+        const { liked, likeCount } = res.result;
+        setComments((prev) =>
+          prev.map((c) =>
+            c.commentId === commentId ? { ...c, isLiked: liked, likeCount } : c
+          )
+        );
+      } else {
+        // 실패 → 롤백
+        loadComments(commentPage);
+        alert(res.message || '좋아요 처리에 실패했습니다.');
+      }
+    } catch (e) {
+      console.error('[CommunityDetail] toggleCommentLike 에러', e);
+      loadComments(commentPage);
     }
   };
 
@@ -327,20 +387,43 @@ export function CommunityDetail() {
             }}
           >
             <button
-              onClick={() => {
-                // TODO: 좋아요 API 연동 필요. 현재 백엔드 스펙에 토글 엔드포인트가 없어 로컬 토글만 동작.
-                setLiked((v) => !v);
-                setLikeCount((c) => (liked ? c - 1 : c + 1));
+              onClick={async () => {
+                if (likeBusy) return;
+                // 낙관적 업데이트 — 서버 응답 오면 실제 값으로 교체
+                const prevLiked = liked;
+                const prevCount = likeCount;
+                setLiked(!prevLiked);
+                setLikeCount(prevLiked ? prevCount - 1 : prevCount + 1);
+                setLikeBusy(true);
+                try {
+                  const res = await toggleBoardLike(postId);
+                  if (res.isSuccess && res.result) {
+                    setLiked(res.result.liked);
+                    setLikeCount(res.result.likeCount);
+                  } else {
+                    setLiked(prevLiked);
+                    setLikeCount(prevCount);
+                    alert(res.message || '좋아요 처리에 실패했습니다.');
+                  }
+                } catch (e) {
+                  console.error('[CommunityDetail] toggleBoardLike 에러', e);
+                  setLiked(prevLiked);
+                  setLikeCount(prevCount);
+                } finally {
+                  setLikeBusy(false);
+                }
               }}
+              disabled={likeBusy}
               aria-label={liked ? '좋아요 취소' : '좋아요'}
               style={{
                 background: 'transparent',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: likeBusy ? 'not-allowed' : 'pointer',
                 padding: 4,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 4,
+                opacity: likeBusy ? 0.6 : 1,
               }}
             >
               <Heart
@@ -403,17 +486,25 @@ export function CommunityDetail() {
             marginBottom: 18,
           }}
         >
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              background: '#E5E7EB',
-              flexShrink: 0,
-            }}
-          />
+          <AuthorLink
+            writerName={post.authorName}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+          >
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: '#E5E7EB',
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ fontSize: 13, color: '#4A5565' }}>
+              {post.authorName}
+            </span>
+          </AuthorLink>
           <span style={{ fontSize: 13, color: '#4A5565' }}>
-            {post.authorName} | {formatDate(post.createdAt)} | 조회 {post.views}
+            | {formatDate(post.createdAt)} | 조회 {post.views}
           </span>
         </div>
 
@@ -533,6 +624,8 @@ export function CommunityDetail() {
                 replies={getReplies(comment.commentId)}
                 onReply={(content) => addReply(comment.commentId, content)}
                 onDelete={handleDeleteComment}
+                onUpdate={handleUpdateComment}
+                onToggleLike={handleToggleCommentLike}
               />
             ))
           )}
@@ -648,17 +741,28 @@ function CommentRow({
   replies,
   onReply,
   onDelete,
+  onUpdate,
+  onToggleLike,
   isReply = false,
 }: {
   comment: Comment;
   replies?: Comment[];
   onReply?: (content: string) => void;
   onDelete?: (commentId: number) => void;
+  onUpdate?: (
+    commentId: number,
+    content: string,
+    isSecret?: boolean
+  ) => Promise<boolean>;
+  onToggleLike?: (commentId: number) => void;
   isReply?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [editOpen, setEditOpen] = useState(false);
+  const [editText, setEditText] = useState(comment.content);
+  const [editSaving, setEditSaving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -687,46 +791,160 @@ function CommentRow({
             style={{ marginTop: 8, flexShrink: 0 }}
           />
         )}
-        <div
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: '50%',
-            background: '#E5E7EB',
-            flexShrink: 0,
-            marginTop: 2,
-          }}
-        />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, color: '#4A5565', marginBottom: 4 }}>
-            {comment.writerName} | {formatDate(comment.createdAt)}
-          </div>
+        <AuthorLink
+          writerName={comment.writerName}
+          style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}
+        >
           <div
             style={{
-              fontSize: 14,
-              color: '#1F2937',
-              lineHeight: 1.6,
-              whiteSpace: 'pre-wrap',
-              marginBottom: 4,
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              background: '#E5E7EB',
+              flexShrink: 0,
+              marginTop: 2,
             }}
-          >
-            {comment.content}
+          />
+        </AuthorLink>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, color: '#4A5565', marginBottom: 4 }}>
+            <AuthorLink writerName={comment.writerName}>
+              {comment.writerName}
+            </AuthorLink>
+            {' | '}
+            {formatDate(comment.createdAt)}
           </div>
-          {!isReply && onReply && (
-            <button
-              onClick={() => setReplyOpen((v) => !v)}
+
+          {editOpen ? (
+            // 인라인 수정 모드
+            <div style={{ marginBottom: 4 }}>
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                rows={2}
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #00AEEF',
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                <button
+                  onClick={async () => {
+                    if (!onUpdate || editSaving) return;
+                    setEditSaving(true);
+                    const ok = await onUpdate(
+                      comment.commentId,
+                      editText,
+                      comment.isSecret
+                    );
+                    setEditSaving(false);
+                    if (ok) setEditOpen(false);
+                  }}
+                  disabled={editSaving || !editText.trim()}
+                  style={{
+                    padding: '6px 14px',
+                    background: editSaving || !editText.trim() ? '#D1D5DB' : '#00AEEF',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: editSaving || !editText.trim() ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {editSaving ? '저장 중...' : '저장'}
+                </button>
+                <button
+                  onClick={() => {
+                    setEditOpen(false);
+                    setEditText(comment.content);
+                  }}
+                  disabled={editSaving}
+                  style={{
+                    padding: '6px 14px',
+                    background: 'white',
+                    border: '1px solid #D1D5DB',
+                    color: '#4A5565',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
               style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#0084D1',
-                fontSize: 12,
-                fontWeight: 500,
-                cursor: 'pointer',
-                padding: '2px 0',
+                fontSize: 14,
+                color: '#1F2937',
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
+                marginBottom: 4,
               }}
             >
-              {replyOpen ? '취소' : '답글'}
-            </button>
+              {comment.content}
+            </div>
+          )}
+
+          {!editOpen && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {/* 좋아요 */}
+              {onToggleLike && (
+                <button
+                  onClick={() => onToggleLike(comment.commentId)}
+                  aria-label={comment.isLiked ? '좋아요 취소' : '좋아요'}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '2px 0',
+                    cursor: 'pointer',
+                    color: comment.isLiked ? '#000' : '#828282',
+                    fontSize: 12,
+                    fontWeight: 500,
+                  }}
+                >
+                  <Heart
+                    size={13}
+                    color={comment.isLiked ? '#000' : '#828282'}
+                    fill={comment.isLiked ? '#000' : 'none'}
+                    strokeWidth={2}
+                  />
+                  <span>{comment.likeCount}</span>
+                </button>
+              )}
+
+              {/* 답글 (대댓글엔 없음) */}
+              {!isReply && onReply && (
+                <button
+                  onClick={() => setReplyOpen((v) => !v)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#0084D1',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    padding: '2px 0',
+                  }}
+                >
+                  {replyOpen ? '취소' : '답글'}
+                </button>
+              )}
+            </div>
           )}
         </div>
         <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
@@ -761,7 +979,8 @@ function CommentRow({
                 icon={<Pencil size={14} />}
                 onClick={() => {
                   setMenuOpen(false);
-                  // TODO: 댓글 수정 모달/인라인 편집 구현 시 updateComment(commentId, ...) 호출
+                  setEditText(comment.content);
+                  setEditOpen(true);
                 }}
               >
                 수정하기
@@ -840,6 +1059,8 @@ function CommentRow({
               comment={reply}
               isReply
               onDelete={onDelete}
+              onUpdate={onUpdate}
+              onToggleLike={onToggleLike}
             />
           ))}
         </div>
