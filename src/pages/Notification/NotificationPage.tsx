@@ -1,51 +1,52 @@
-import { useEffect, useRef, useState } from 'react';
-import { ChevronsLeft } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronsLeft, Settings, ArrowLeft } from 'lucide-react';
+import { useNotificationSSE } from '../../hooks/useNotificationSSE';
+import {
+  getNotifications,
+  markNotificationAsRead,
+  type NotificationItem,
+  type SseNotification,
+} from '../../api/notification';
+import { NotificationSettingsPanel } from './NotificationSettingsPanel';
 
+// 표시용 정규화 타입. 목록 API 와 SSE 둘 다 이 형태로 변환해서 다룬다.
 type Notification = {
   id: number;
   avatar?: string;
-  nickname: string;
+  // 목록 API 는 actor nickname 을 주지 않으므로 optional.
+  nickname?: string;
   message: string;
   reply?: string;
   date: string;
   read: boolean;
 };
 
-// 시연용 dummy 데이터. 백엔드 알림 API 생기면 fetch로 교체.
-const DUMMY_NOTIFICATIONS: Notification[] = [
-  {
-    id: 1,
-    nickname: '닉네임',
-    message: '내 글에 댓글을 달았습니다.',
-    reply: '저 관심있어요.',
-    date: '2026.03.01',
-    read: false,
-  },
-  {
-    id: 2,
-    nickname: '닉네임',
-    message: '내 글에 댓글을 달았습니다.',
-    reply: '저 관심있어요.',
-    date: '2026.03.01',
-    read: false,
-  },
-  {
-    id: 3,
-    nickname: '닉네임',
-    message: '내 글에 댓글을 달았습니다.',
-    reply: '저 관심있어요.',
-    date: '2026.03.01',
-    read: true,
-  },
-  {
-    id: 4,
-    nickname: '닉네임',
-    message: '내 글에 댓글을 달았습니다.',
-    reply: '저 관심있어요.',
-    date: '2026.03.01',
-    read: true,
-  },
-];
+// "2026-04-08T01:40:00" → "2026.04.08"
+const formatDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
+
+// SSE 페이로드 → Notification.
+// tag 가 REPLY → "내 댓글에 답글을 달았습니다.", 그 외 → "내 글에 댓글을 달았습니다."
+const mapSseToNotification = (n: SseNotification): Notification => ({
+  id: n.notificationId,
+  nickname: n.actorNickname,
+  message:
+    n.tag === 'REPLY'
+      ? '내 댓글에 답글을 달았습니다.'
+      : '내 글에 댓글을 달았습니다.',
+  reply: n.previewContent,
+  date: formatDate(n.createdAt),
+  read: n.isRead,
+});
+
+// 목록 API item → Notification. 서버가 완성된 message 를 내려주므로 그대로 사용.
+const mapItemToNotification = (n: NotificationItem): Notification => ({
+  id: n.notificationId,
+  message: n.message,
+  date: formatDate(n.createdAt),
+  read: n.isRead,
+});
+
+const PAGE_SIZE = 20;
 
 type DrawerProps = {
   isOpen: boolean;
@@ -56,10 +57,58 @@ const SIDEBAR_WIDTH = 256; // w-64 (Tailwind) = 16rem = 256px
 const DRAWER_WIDTH = 420;
 
 export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
-  const [notifications, setNotifications] = useState<Notification[]>(
-    DUMMY_NOTIFICATIONS
-  );
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [view, setView] = useState<'list' | 'settings'>('list');
   const drawerRef = useRef<HTMLDivElement>(null);
+
+  // SSE: 새 알림 수신 시 리스트 상단에 추가 (중복 id 는 갱신)
+  const handleSseNotification = useCallback((n: SseNotification) => {
+    const mapped = mapSseToNotification(n);
+    setNotifications((prev) => {
+      const without = prev.filter((p) => p.id !== mapped.id);
+      return [mapped, ...without];
+    });
+  }, []);
+
+  useNotificationSSE({ onNotification: handleSseNotification });
+
+  // Drawer 가 열릴 때마다 목록 새로 fetch (1페이지, 읽음/안읽음 모두)
+  useEffect(() => {
+    if (!isOpen) return;
+    setView('list'); // 다시 열 때는 항상 목록부터
+    let cancelled = false;
+    setIsLoading(true);
+    setLoadError(null);
+
+    // 백엔드 페이지네이션이 0-indexed (Spring 관례) — 첫 페이지는 0.
+    getNotifications({ page: 0, size: PAGE_SIZE })
+      .then((res) => {
+        if (cancelled) return;
+        console.log('[notifications] list response', res);
+        // isSuccess === false 인 경우만 에러로 취급.
+        // result 가 null 이거나 notifications 가 비어있어도 정상 (알림 0건).
+        if (res.isSuccess === false) {
+          setLoadError(res.message || '알림을 불러오지 못했어요.');
+          return;
+        }
+        const list = res.result?.notifications ?? [];
+        setNotifications(list.map(mapItemToNotification));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('[notifications] list error', err);
+        setLoadError('알림을 불러오지 못했어요.');
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   // Esc로 닫기
   useEffect(() => {
@@ -72,9 +121,26 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
   }, [isOpen, onClose]);
 
   const handleItemClick = (id: number) => {
+    // 이미 읽음이면 서버 호출 생략
+    const target = notifications.find((n) => n.id === id);
+    if (!target || target.read) return;
+
+    // 낙관적 업데이트
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+
+    markNotificationAsRead(id)
+      .then((res) => {
+        if (!res.isSuccess) throw new Error(res.message);
+      })
+      .catch((err) => {
+        // 실패 시 롤백
+        console.error('[notifications] mark-as-read failed', err);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, read: false } : n))
+        );
+      });
     // TODO: 알림 클릭 시 해당 게시글/댓글로 이동 (백엔드 알림 데이터에 link/boardId 필요)
   };
 
@@ -138,39 +204,107 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
             flexShrink: 0,
           }}
         >
-          <h1
-            style={{
-              fontSize: 20,
-              fontWeight: 700,
-              color: '#101828',
-              margin: 0,
-            }}
-          >
-            알림
-          </h1>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 4,
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#6A7282',
-            }}
-            aria-label="알림 닫기"
-          >
-            <ChevronsLeft size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {view === 'settings' && (
+              <button
+                type="button"
+                onClick={() => setView('list')}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 4,
+                  borderRadius: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#6A7282',
+                }}
+                aria-label="알림 목록으로"
+              >
+                <ArrowLeft size={20} />
+              </button>
+            )}
+            <h1
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                color: '#101828',
+                margin: 0,
+              }}
+            >
+              {view === 'settings' ? '알림 설정' : '알림'}
+            </h1>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {view === 'list' && (
+              <button
+                type="button"
+                onClick={() => setView('settings')}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 4,
+                  borderRadius: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#6A7282',
+                }}
+                aria-label="알림 설정"
+              >
+                <Settings size={20} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 4,
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#6A7282',
+              }}
+              aria-label="알림 닫기"
+            >
+              <ChevronsLeft size={20} />
+            </button>
+          </div>
         </div>
 
-        {/* 알림 리스트 */}
+        {/* 본문: 목록 또는 설정 */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {notifications.length === 0 ? (
+          {view === 'settings' ? (
+            <NotificationSettingsPanel />
+          ) : isLoading ? (
+            <div
+              style={{
+                padding: '60px 20px',
+                textAlign: 'center',
+                color: '#6A7282',
+                fontSize: 13,
+              }}
+            >
+              불러오는 중...
+            </div>
+          ) : loadError ? (
+            <div
+              style={{
+                padding: '60px 20px',
+                textAlign: 'center',
+                color: '#DC2626',
+                fontSize: 13,
+              }}
+            >
+              {loadError}
+            </div>
+          ) : notifications.length === 0 ? (
             <div
               style={{
                 padding: '60px 20px',
@@ -212,7 +346,7 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
                 {n.avatar ? (
                   <img
                     src={n.avatar}
-                    alt={n.nickname}
+                    alt={n.nickname ?? ''}
                     style={{
                       width: 32,
                       height: 32,
@@ -253,9 +387,11 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
                         minWidth: 0,
                       }}
                     >
-                      <span style={{ fontWeight: 600 }}>{n.nickname}</span>
+                      {n.nickname && (
+                        <span style={{ fontWeight: 600 }}>{n.nickname}</span>
+                      )}
                       <span style={{ color: '#4A5565' }}>
-                        님 {n.message}
+                        {n.nickname ? `님 ${n.message}` : n.message}
                       </span>
                     </div>
                     <span
