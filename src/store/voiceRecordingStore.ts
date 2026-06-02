@@ -6,18 +6,20 @@ import { create } from 'zustand';
 type VoiceRecordingStore = {
   recordings: Record<number, Blob>;
   mockQuestionCount: number;
-  
-  currentQuestionIds: number[];
+  currentQuestionIds: number[];    // 폴링 대상 (패스된 질문 제외)
+  allSessionQuestionIds: number[]; // 세션 전체 질문 (패스 포함)
   setRecording: (questionId: number, blob: Blob) => void;
   removeRecording: (questionId: number) => void;
   setMockQuestionCount: (count: number) => void;
   setCurrentQuestionIds: (ids: number[]) => void;
+  setAllSessionQuestionIds: (ids: number[]) => void;
 };
 
 export const useVoiceRecordingStore = create<VoiceRecordingStore>((set) => ({
   recordings: {},
   mockQuestionCount: 3,
   currentQuestionIds: [],
+  allSessionQuestionIds: [],
   setRecording: (questionId, blob) =>
     set((state) => ({
       recordings: { ...state.recordings, [questionId]: blob },
@@ -30,4 +32,5 @@ export const useVoiceRecordingStore = create<VoiceRecordingStore>((set) => ({
     }),
   setMockQuestionCount: (count) => set({ mockQuestionCount: count }),
   setCurrentQuestionIds: (ids) => set({ currentQuestionIds: ids }),
+  setAllSessionQuestionIds: (ids) => set({ allSessionQuestionIds: ids }),
 }));
