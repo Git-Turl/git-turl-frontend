@@ -18,7 +18,7 @@ export function AnalyticsLoading() {
 
       try {
         const response = await getReportDetail(Number(reportId));
-        if (response.isSuccess) {
+        if (response.isSuccess && response.result) {
           // 분석본이 준비되면 상세 페이지로 이동
           navigate(`/analytics/detail/${reportId}`);
         } else {
