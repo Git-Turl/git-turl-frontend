@@ -1,4 +1,35 @@
 import { ArrowRight, GitBranch, MessageSquare, Users } from 'lucide-react'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+import gitturlLogo from '../../assets/logo/gitturl-logo.svg'
+
+// 설문 Q5: 기술 면접 준비 시 가장 어려운 점 (복수 응답, 응답 28개 기준)
+const SURVEY_Q5 = [
+  { label: '코드 구현 의도가 기억나지 않음', count: 22, pct: 78.6 },
+  { label: '내 코드에서 나올 질문 예측 어려움', count: 18, pct: 64.3 },
+  { label: '객관적 피드백 받기 어려움', count: 15, pct: 53.6 },
+  { label: 'README/포트폴리오 요약이 힘듦', count: 10, pct: 35.7 },
+  { label: '정리 안 해서 까먹음', count: 1, pct: 3.6 },
+  { label: '모르겠다', count: 1, pct: 3.6 },
+]
+
+// 설문 Q6: GitHub 레포/코드 재분석 평균 소요 시간
+const SURVEY_Q6 = [
+  { name: '1시간 미만', value: 14.3, color: '#3B82F6' },
+  { name: '1시간 ~ 3시간', value: 28.6, color: '#EF4444' },
+  { name: '3시간 ~ 5시간', value: 32.1, color: '#F59E0B' },
+  { name: '5시간 이상', value: 25.0, color: '#10B981' },
+]
 
 export function Onboarding() {
   const handleLogin = () => {
@@ -29,7 +60,11 @@ export function Onboarding() {
       }}>
         {/* 로고 */}
         <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
-          <span style={{fontSize: 36}}>🪶</span>
+          <img
+            src={gitturlLogo}
+            alt="깃털"
+            style={{ width: 64, height: 64, objectFit: 'contain' }}
+          />
           <div>
             <div style={{
               color: '#0E2248',
@@ -144,28 +179,22 @@ export function Onboarding() {
           </button>
         </div>
 
-        {/* 오른쪽: 일러스트 영역 (임시 박스) */}
+        {/* 오른쪽: 일러스트 (깃털 로고) */}
         <div style={{
-          width: 400,
-          height: 400,
-          background: '#F0F9FF',
-          borderRadius: 20,
+          width: 600,
+          height: 600,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          zIndex: 2
+          zIndex: 2,
+          marginRight: -60,
         }}>
-          <div style={{
-            color: '#00AEEF',
-            fontSize: 20,
-            fontFamily: 'Inter',
-            fontWeight: 600,
-            textAlign: 'center'
-          }}>
-            📊<br/>
-            일러스트 영역
-          </div>
+          <img
+            src={gitturlLogo}
+            alt="깃털 로고"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
         </div>
 
         {/* 배경 장식 원 (왼쪽 하단) */}
@@ -203,56 +232,127 @@ export function Onboarding() {
         <div style={{
           width: '100%',
           maxWidth: 1700,
-          height: 400,
           background: 'white',
           borderRadius: 20,
           margin: '0 auto',
           padding: 40,
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'stretch',
           justifyContent: 'space-between',
-          gap: 40
+          gap: 40,
+          flexWrap: 'wrap',
         }}>
-          {/* 왼쪽: 회색 안내 박스 */}
+          {/* 왼쪽: Q5 막대 차트 — 기술 면접 준비 시 어려움 (복수 응답) */}
           <div style={{
-            flex: 1,
-            height: 280,
-            background: '#F2F2F2',
+            flex: '1 1 480px',
+            minWidth: 480,
+            background: '#F9FAFB',
             borderRadius: 20,
+            padding: 24,
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#828282',
-            fontSize: 20,
-            fontFamily: 'Inter',
-            fontWeight: 500,
-            textAlign: 'center',
-            padding: 30
+            flexDirection: 'column',
+            gap: 16,
           }}>
-            깃허브를 분석할 때 겪는 어려움을<br/>
-            조사한 결과를 보여주는 영역입니다
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#0E2248', lineHeight: 1.4 }}>
+              기술 면접 준비 시 가장 어려운 점
+            </div>
+            <div style={{ fontSize: 12, color: '#828282', marginTop: -8 }}>
+              28명 대상 설문 · 복수 응답
+            </div>
+            <div style={{ flex: 1, minHeight: 340 }}>
+              <ResponsiveContainer width="100%" height={340}>
+                <BarChart
+                  data={SURVEY_Q5}
+                  layout="vertical"
+                  margin={{ top: 10, right: 50, left: 10, bottom: 10 }}
+                  barCategoryGap={10}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: '#6A7282' }} />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    width={210}
+                    tick={{ fontSize: 11, fill: '#454545' }}
+                    interval={0}
+                  />
+                  <Tooltip
+                    formatter={(_v, _n, item) => {
+                      const p = item?.payload as { count: number; pct: number } | undefined
+                      return p ? [`${p.count}명 (${p.pct}%)`, '응답'] : null
+                    }}
+                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  />
+                  <Bar dataKey="count" fill="#6366F1" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          {/* 오른쪽: 그래프 이미지 */}
+          {/* 오른쪽: Q6 파이 차트 — GitHub 재분석 소요 시간 */}
           <div style={{
-            width: 400,
-            height: 280,
-            background: 'rgba(217, 217, 217, 0.33)',
+            flex: '0 0 420px',
+            background: '#F9FAFB',
             borderRadius: 20,
+            padding: 24,
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
             flexDirection: 'column',
-            gap: 10,
-            color: 'white',
-            fontSize: 28,
-            fontFamily: 'Inter',
-            fontWeight: 500
+            gap: 16,
           }}>
-            <div style={{color: '#00AEEF', fontSize: 60}}>📊</div>
-            <div style={{color: '#00AEEF', fontSize: 20}}>
-              구글폼 조사결과 그래프
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#0E2248', lineHeight: 1.4 }}>
+              GitHub 코드 재분석 평균 소요 시간
+            </div>
+            <div style={{ fontSize: 12, color: '#828282', marginTop: -8 }}>
+              28명 대상 설문
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+              <div style={{ width: 220, height: 220 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={SURVEY_Q6}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={0}
+                      outerRadius={100}
+                      paddingAngle={1}
+                      label={(entry: { value?: number }) =>
+                        entry.value != null ? `${entry.value}%` : ''
+                      }
+                      labelLine={false}
+                      fontSize={11}
+                    >
+                      {SURVEY_Q6.map((s) => (
+                        <Cell key={s.name} fill={s.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v) => [`${v}%`, '응답']}
+                      contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                fontSize: 13,
+                color: '#454545',
+              }}>
+                {SURVEY_Q6.map((s) => (
+                  <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: 3,
+                      background: s.color,
+                      flexShrink: 0,
+                    }} />
+                    <span>{s.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

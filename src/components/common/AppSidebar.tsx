@@ -1,6 +1,9 @@
-import { Home, BarChart3, MessageSquare, Users, Bell, Mic, Type, ChevronRight } from 'lucide-react';
+import { Home, BarChart3, MessageSquare, Users, Bell, Mic, Type, ChevronRight, LogOut } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useState, useRef, useEffect } from 'react';
+import { logout as logoutApi } from '../../api/auth';
+import { useAuthStore } from '../../store/authStore';
+import gitturlLogo from '../../assets/logo/gitturl-logo.svg';
 
 interface AppSidebarProps {
   userProfile?: {
@@ -20,7 +23,34 @@ export function AppSidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const [showInterviewPopup, setShowInterviewPopup] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
+  const storeLogout = useAuthStore((s) => s.logout);
+
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (loggingOut) return;
+    if (!confirm('로그아웃하시겠습니까?')) return;
+    setLoggingOut(true);
+    try {
+      // 1) 서버: refresh token 삭제 + 쿠키 만료
+      await logoutApi().catch((err: unknown) => {
+        const e = err as { response?: { data?: { code?: string } } };
+        const code = e?.response?.data?.code;
+        // AUTH404_1: 리프레시 토큰이 이미 없음 = 사실상 이미 로그아웃 상태이므로 정상 처리
+        if (code === 'AUTH404_1') return;
+        // 그 외 (네트워크 에러 등) 만 경고 — 클라이언트 정리는 어차피 진행
+        console.warn('[AppSidebar] 로그아웃 API 실패, 클라이언트 정리만 진행', err);
+      });
+    } finally {
+      // 2) 클라이언트: accessToken 등 메모리 + localStorage 정리
+      storeLogout();
+      localStorage.removeItem('userInfo');
+      setLoggingOut(false);
+      navigate('/login');
+    }
+  };
 
   const navItems = [
     { id: 'home', icon: Home, label: 'Home', path: '/' },
@@ -60,7 +90,11 @@ export function AppSidebar({
       {/* 로고 섹션 */}
       <div className="p-6 border-b border-sky-100">
         <div className="flex items-center gap-3">
-          <div className="text-3xl">🪶</div>
+          <img
+            src={gitturlLogo}
+            alt="깃털"
+            className="w-14 h-14 object-contain"
+          />
           <div>
             <h1 className="text-xl text-sky-600">깃털</h1>
             <p className="text-xs text-gray-500">Git-turl</p>
@@ -158,23 +192,39 @@ export function AppSidebar({
         })}
       </nav>
 
-      {/* 사용자 프로필 */}
+      {/* 사용자 프로필 + 로그아웃 */}
       {userProfile && (
         <div className="p-4 border-t border-sky-100">
-          <Link
-            to="/mypage"
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-sky-50 transition-colors"
-          >
-            <img
-              src={userProfile.avatar}
-              alt={userProfile.name}
-              className="w-10 h-10 rounded-full ring-2 ring-sky-100"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-900 truncate">{userProfile.name}</p>
-              <p className="text-xs text-gray-500 truncate">{userProfile.email}</p>
-            </div>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/mypage"
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-sky-50 transition-colors flex-1 min-w-0"
+            >
+              <img
+                src={userProfile.avatar}
+                alt={userProfile.name}
+                className="w-10 h-10 rounded-full ring-2 ring-sky-100"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-900 truncate">{userProfile.name}</p>
+                <p className="text-xs text-gray-500 truncate">{userProfile.email}</p>
+              </div>
+            </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              title="로그아웃"
+              aria-label="로그아웃"
+              className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
+                loggingOut
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
+              }`}
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       )}
     </aside>
