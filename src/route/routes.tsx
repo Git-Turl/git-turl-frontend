@@ -12,6 +12,12 @@ import { Home } from '../pages/Home/Home';
 import { MyPage } from '../pages/MyPage/MyPage';
 import { MyPosts } from '../pages/MyPage/MyPosts';
 import { MyComments } from '../pages/MyPage/MyComments';
+import { OtherProfile } from '../pages/Profile/OtherProfile';
+
+// 커뮤니티
+import { CommunityList } from '../pages/Community/CommunityList';
+import { CommunityWrite } from '../pages/Community/CommunityWrite';
+import { CommunityDetail } from '../pages/Community/CommunityDetail';
 
 // 분석
 import { Analytics } from '../pages/Analysis/Analytics';
@@ -39,7 +45,7 @@ export const router = createBrowserRouter([
     path: '/',
     element: <Navigate to="/onboarding" replace />,
   },
-  
+
   // 인증 및 온보딩 라우트 (레이아웃 없음)
   {
     path: '/onboarding',
@@ -57,7 +63,7 @@ export const router = createBrowserRouter([
     path: '/signup',
     Component: SignUp,
   },
-  
+
   // 메인 앱 라우트 (레이아웃 포함)
   {
     path: '/',
@@ -68,23 +74,41 @@ export const router = createBrowserRouter([
         path: 'home',
         Component: Home,
       },
-      
+
       // 마이페이지
       {
         path: 'mypage',
         Component: MyPage,
       },
-      
-      // 커뮤니티
       {
-        path: 'community',
+        path: 'my-posts',
         Component: MyPosts,
       },
       {
         path: 'my-comments',
         Component: MyComments,
       },
-      
+
+      // 타인 프로필 (닉네임 기반)
+      {
+        path: 'profile/:nickname',
+        Component: OtherProfile,
+      },
+
+      // 커뮤니티
+      {
+        path: 'community',
+        Component: CommunityList,
+      },
+      {
+        path: 'community/write',
+        Component: CommunityWrite,
+      },
+      {
+        path: 'community/:id',
+        Component: CommunityDetail,
+      },
+
       // 분석 라우트
       {
         path: 'analytics',
@@ -102,7 +126,7 @@ export const router = createBrowserRouter([
         path: 'analytics/detail/:id',
         Component: AnalyticsDetail,
       },
-      
+
       // 인터뷰 라우트
       {
         path: 'interview',
@@ -120,6 +144,7 @@ export const router = createBrowserRouter([
         path: 'interview/detail/:id',
         Component: InterviewDetail,
       },
+
       // 음성면접 라우트
       {
         path: 'voice-interview',

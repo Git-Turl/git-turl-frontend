@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react';
 import { ProfileCard } from '../../components/common/ProfileCard';
 import { GitHubCard } from '../../components/common/GitHubCard';
 import { SummaryCarousel } from '../../components/common/SummaryCarousel';
-import { getMyProfile, getProfileImage, getRepositories } from '../../api/member';
+import {
+  getMyHistory,
+  getMyProfile,
+  getProfileImage,
+  getRepositories,
+  type GitTurlHistory,
+} from '../../api/member';
 import defaultProfile from '../../assets/img/img_profile.svg';
 
 export function MyPage() {
@@ -20,6 +26,7 @@ export function MyPage() {
 
   const [loading, setLoading] = useState(true);
   const [repositories, setRepositories] = useState<any[]>([]);
+  const [history, setHistory] = useState<GitTurlHistory | null>(null);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -47,6 +54,16 @@ export function MyPage() {
           }
         } catch (repoError) {
           console.error('레포지토리 목록 로딩 실패:', repoError);
+        }
+
+        // 깃털 히스토리 조회
+        try {
+          const historyResponse = await getMyHistory();
+          if (historyResponse.isSuccess && historyResponse.result) {
+            setHistory(historyResponse.result);
+          }
+        } catch (historyError) {
+          console.error('히스토리 로딩 실패:', historyError);
         }
 
         // jobType을 techStack으로 변환
@@ -106,14 +123,43 @@ export function MyPage() {
 
         {/* 그리드 레이아웃 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* 왼쪽 컬럼 - 프로필 */}
-          <div className="lg:col-span-1">
+          {/* 왼쪽 컬럼 - 프로필 + 히스토리 */}
+          <div className="lg:col-span-1 space-y-4">
             <ProfileCard
               profileImage={profileData.profileImage}
               nickname={profileData.nickname}
               githubId={profileData.githubId}
               techStack={profileData.techStack}
             />
+
+            {/* 깃털 히스토리 */}
+            {history && (
+              <div className="p-6 bg-white shadow-sm border border-sky-100 rounded-xl">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">
+                  깃털 히스토리
+                </h3>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-sky-600">
+                      {history.daysWthGitTurl}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">함께한 일수</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-sky-600">
+                      {history.githubReportCount}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">분석 리포트</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-sky-600">
+                      {history.interviewQuestionCount}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">인터뷰 질문</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 오른쪽 컬럼 - GitHub & Summaries */}
