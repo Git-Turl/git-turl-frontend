@@ -8,14 +8,19 @@ type VoiceRecordingStore = {
   mockQuestionCount: number;
 
   // 방금 생성한 질문 ID 목록. 같은 레포에 과거 질문이 쌓여 있어도 이 ID로만 필터링
+  // (폴링 대상 — 패스된 질문 제외)
   currentQuestionIds: number[];
+  // 세션 전체 질문 (패스 포함)
+  allSessionQuestionIds: number[];
   // 분석에 실패한(백엔드에서 QUESTION404 등으로 영구 실패 응답) 질문 ID 목록
   // 피드백 화면에서 "분석 실패"로 별도 표시하기 위해 사용
   failedQuestionIds: number[];
+
   setRecording: (questionId: number, blob: Blob) => void;
   removeRecording: (questionId: number) => void;
   setMockQuestionCount: (count: number) => void;
   setCurrentQuestionIds: (ids: number[]) => void;
+  setAllSessionQuestionIds: (ids: number[]) => void;
   setFailedQuestionIds: (ids: number[]) => void;
 };
 
@@ -23,6 +28,7 @@ export const useVoiceRecordingStore = create<VoiceRecordingStore>((set) => ({
   recordings: {},
   mockQuestionCount: 3,
   currentQuestionIds: [],
+  allSessionQuestionIds: [],
   failedQuestionIds: [],
   setRecording: (questionId, blob) =>
     set((state) => ({
@@ -36,5 +42,6 @@ export const useVoiceRecordingStore = create<VoiceRecordingStore>((set) => ({
     }),
   setMockQuestionCount: (count) => set({ mockQuestionCount: count }),
   setCurrentQuestionIds: (ids) => set({ currentQuestionIds: ids }),
+  setAllSessionQuestionIds: (ids) => set({ allSessionQuestionIds: ids }),
   setFailedQuestionIds: (ids) => set({ failedQuestionIds: ids }),
 }));

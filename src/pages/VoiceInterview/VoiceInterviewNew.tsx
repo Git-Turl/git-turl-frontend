@@ -31,23 +31,21 @@ export function VoiceInterviewNew() {
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    getVoiceReports()
+    setIsLoading(true);
+    const params = {
+      answerType: 'ALL' as const,
+      ...(filterMode === 'date' && {
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      }),
+    };
+    getVoiceReports(params)
       .then((list) => setReports(list))
-      .catch(() => setReports([MOCK_REPORT])) // 네트워크 실패 시에만 모크
+      .catch(() => setReports([MOCK_REPORT]))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [filterMode, startDate, endDate]);
 
-  const filteredReports = reports.filter((report) => {
-    if (filterMode === 'all') return true;
-
-    const itemDate = new Date(report.createdAt);
-    const start = startDate ? new Date(startDate) : null;
-    const end = endDate ? new Date(endDate) : null;
-
-    if (start && itemDate < start) return false;
-    if (end && itemDate > end) return false;
-    return true;
-  });
+  const filteredReports = reports;
 
   const selectedReport = reports.find((r) => r.reportId === selectedReportId);
 
@@ -71,7 +69,10 @@ export function VoiceInterviewNew() {
       const ids = res.result?.questionIdList ?? [];
       console.log('[VoiceInterview] questionIdList', ids, '(요청 개수:', questionCount, ')');
       // 사용자가 선택한 개수만큼만 저장 (백엔드가 더 많이 줘도 자름)
-      store.setCurrentQuestionIds(ids.slice(0, questionCount));
+      const sessionIds = ids.slice(0, questionCount);
+      store.setCurrentQuestionIds(sessionIds);
+      // 패스 포함 전체 세션 질문 ID 저장 (피드백 페이지에서 패스 문항도 표시용)
+      store.setAllSessionQuestionIds(sessionIds);
     } catch (e) {
       // 백엔드 실패 시에도 모크 모드로 흐름을 이어감
       console.error('[VoiceInterview] generateQuestions FAILED', e);
@@ -230,7 +231,7 @@ export function VoiceInterviewNew() {
                       </div>
                       <div className="flex-1">
                         <h3 className={`font-medium mb-1 ${selectedReportId === report.reportId ? 'text-sky-900' : 'text-gray-900'}`}>
-                          {report.repoName}
+                          {report.reportTitle ?? report.repoName}
                         </h3>
                         {report.description && (
                           <p className="text-sm text-gray-600 mb-2">{report.description}</p>
@@ -287,7 +288,7 @@ export function VoiceInterviewNew() {
               <div className="mb-6 p-4 bg-sky-50 border border-sky-200 rounded-lg">
                 <p className="text-sm text-gray-700">
                   <span className="text-gray-600">선택된 요약본:</span>
-                  <span className="ml-2 font-medium text-sky-700">{selectedReport.repoName}</span>
+                  <span className="ml-2 font-medium text-sky-700">{selectedReport.reportTitle ?? selectedReport.repoName}</span>
                   <span className="ml-4 text-gray-600">질문 개수:</span>
                   <span className="ml-2 font-medium text-sky-700">{questionCount}개</span>
                 </p>

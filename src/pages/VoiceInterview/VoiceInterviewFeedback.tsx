@@ -56,27 +56,13 @@ export function VoiceInterviewFeedback() {
     (async () => {
       try {
         const questions = await getAllVoiceQuestions(reportId);
-        // 같은 레포에 과거 질문이 누적돼 있을 수 있어 이번 세션 ID로만 필터링
         const store = useVoiceRecordingStore.getState();
-        const currentIds = store.currentQuestionIds;
-        const requested = Math.max(1, Math.min(store.mockQuestionCount, 5));
-        let scoped: typeof questions;
-        if (currentIds.length > 0) {
-          scoped = questions.filter((q) => currentIds.includes(q.questionId));
-        } else {
-          // 폴백: 최신순 정렬 후 사용자가 선택한 개수만큼만
-          scoped = [...questions]
-            .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-            .slice(0, requested);
-        }
-        // 사용자가 선택한 개수만큼만 표시
-        scoped = scoped.slice(0, requested);
-        // 모자라면 모크로 패딩 (백엔드가 요청 수만큼 안 줘도 화면은 N개로 채움)
-        if (scoped.length < requested) {
-          const padFromMock = getMockQuestions(requested).slice(scoped.length);
-          scoped = [...scoped, ...padFromMock];
-        }
-        const list = scoped.length > 0 ? scoped : mockQuestions;
+        const allSessionIds = store.allSessionQuestionIds;
+        // allSessionIds가 있으면 녹음 직후 세션 → 패스 포함 전체 세션 질문 표시
+        // 없으면 내역에서 접근 → 전체 질문 표시
+        const list = allSessionIds.length > 0
+          ? questions.filter((q) => allSessionIds.includes(q.questionId))
+          : questions;
         const items = await Promise.all(
           list.map(async (q) => {
             try {
@@ -165,7 +151,6 @@ export function VoiceInterviewFeedback() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl text-gray-900 mb-2">음성 면접 피드백</h1>
-          <p className="text-gray-600">ecommerce-platform</p>
         </div>
 
         <div className="flex gap-8 items-start">

@@ -7,10 +7,10 @@ import type { ApiResponse } from './types';
 export type VoiceAnswer = {
   answerId: number;
   content: string;
-  feedback: string;
+  feedback: string | null;
   createdAt: string;
-  voiceFile: string;
-  answerSummary: string;
+  voiceFile: string | null;
+  answerSummary: string | null;
   keywords: string[];
   status: string | null;
 };
@@ -66,10 +66,10 @@ export const saveVoiceAnswer = async (
   questionId: number,
   voiceFile: File | Blob,
   fileName = 'answer.webm'
-): Promise<ApiResponse<VoiceAnswer>> => {
+): Promise<ApiResponse<null>> => {
   const formData = new FormData();
-  formData.append('voiceFile', voiceFile, fileName);
-  const response = await client.post<ApiResponse<VoiceAnswer>>(
+  formData.append('file', voiceFile, fileName);
+  const response = await client.post<ApiResponse<null>>(
     `/api/v1/questions/${questionId}/answers/voice`,
     formData,
     {
@@ -172,6 +172,7 @@ export const generateQuestions = async (
 export type ReportSummary = {
   reportId: number;
   repoName: string;
+  reportTitle?: string;
   description: string | null;
   createdAt: string;
   questionCount: number;
@@ -184,14 +185,24 @@ type ReportListResult = {
   pageSize: number;
 };
 
+export type VoiceReportParams = {
+  answerType?: 'ALL' | 'VOICE' | 'TEXT';
+  startDate?: string;
+  endDate?: string;
+};
+
 /**
  * 음성면접용 요약본 목록 조회
  * GET /api/v1/reports
  */
-export const getVoiceReports = async (): Promise<ReportSummary[]> => {
+export const getVoiceReports = async (
+  params?: VoiceReportParams
+): Promise<ReportSummary[]> => {
   const queryParams = new URLSearchParams();
-  queryParams.append('cursor', '-1');
-  queryParams.append('pageSize', '50');
+  queryParams.append('answerType', params?.answerType ?? 'VOICE');
+  queryParams.append('pageSize', '20');
+  if (params?.startDate) queryParams.append('startDate', params.startDate);
+  if (params?.endDate) queryParams.append('endDate', params.endDate);
   const response = await client.get<ApiResponse<ReportListResult>>(
     `/api/v1/reports?${queryParams.toString()}`
   );
