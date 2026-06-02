@@ -72,7 +72,12 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
     });
   }, []);
 
-  useNotificationSSE({ onNotification: handleSseNotification });
+  // SSE 는 드로어가 열려 있을 때만 연결 — 백엔드 SseEmitter 스레드 부담 최소화.
+  // 닫을 때 AbortController 로 자동 해제, 다시 열 때 새 연결.
+  useNotificationSSE({
+    onNotification: handleSseNotification,
+    enabled: isOpen,
+  });
 
   // Drawer 가 열릴 때마다 목록 새로 fetch (1페이지, 읽음/안읽음 모두)
   useEffect(() => {
