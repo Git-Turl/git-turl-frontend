@@ -199,13 +199,14 @@ export type NotificationReadResult = {
 
 /**
  * 알림 읽음 처리
- * PATCH /api/v1/notifications/{notificationId}
+ * PATCH /api/v1/notifications/{notificationId}/read
+ * (Swagger 기준 — /read suffix 필요)
  */
 export const markNotificationAsRead = async (
   notificationId: number
 ): Promise<ApiResponse<NotificationReadResult>> => {
   const response = await client.patch<ApiResponse<NotificationReadResult>>(
-    `/api/v1/notifications/${notificationId}`
+    `/api/v1/notifications/${notificationId}/read`
   );
   return response.data;
 };
