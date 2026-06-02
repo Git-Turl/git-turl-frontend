@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { ChevronDown, X, Check } from 'lucide-react';
-import { createBoard, type BoardType } from '../../api/community';
+import {
+  createBoard,
+  updateBoard,
+  getBoardDetail,
+  type BoardType,
+  type StudyTag as ApiStudyTag,
+  type TechField,
+  type ProjectStatus,
+  type PlatformType,
+} from '../../api/community';
 import { setRecruitStatus } from '../../utils/localBoardStatus';
 import { RichTextEditor } from '../../components/RichTextEditor/RichTextEditor';
 
@@ -60,8 +69,58 @@ const stackData: Record<StackSection, string[]> = {
   ],
 };
 
+// ===== UI 입력 → 백엔드 enum 매핑 =====
+
+const studyTagToApi: Record<StudyTag, ApiStudyTag> = {
+  어학: 'LANGUAGE',
+  자격증: 'CERTIFICATE',
+  코딩테스트: 'CODING_TEST',
+};
+
+// 백엔드 enum → UI 라벨 (수정 시 폼 프리필용 역매핑)
+const apiToStudyTag: Record<ApiStudyTag, StudyTag> = {
+  LANGUAGE: '어학',
+  CERTIFICATE: '자격증',
+  CODING_TEST: '코딩테스트',
+};
+
+const boardTypeToPostType: Record<BoardType, PostType> = {
+  STUDY: 'study',
+  PROJECT: 'project',
+  FORUM: 'free',
+};
+
+const stackSectionToTechField: Record<StackSection, TechField> = {
+  프론트: 'FRONTED', // ⚠️ 백엔드 enum 오타 그대로
+  백엔드: 'BACKEND',
+  AI: 'AI',
+};
+
+// 선택된 스택 배열을 분야(BACKEND/FRONTED/AI/ETC) 집합으로 변환
+function deriveTechFields(stacks: string[] | undefined): TechField[] {
+  if (!stacks || stacks.length === 0) return [];
+  const fields = new Set<TechField>();
+  for (const stack of stacks) {
+    let matched = false;
+    (Object.keys(stackData) as StackSection[]).forEach((section) => {
+      if (stackData[section].includes(stack)) {
+        fields.add(stackSectionToTechField[section]);
+        matched = true;
+      }
+    });
+    if (!matched) fields.add('ETC');
+  }
+  return Array.from(fields);
+}
+
 export function CommunityWrite() {
   const navigate = useNavigate();
+
+  // 쿼리 파라미터 ?id=123 가 있으면 수정 모드
+  const [searchParams] = useSearchParams();
+  const editIdParam = searchParams.get('id');
+  const editId = editIdParam ? Number(editIdParam) : null;
+  const isEditMode = editId !== null && !isNaN(editId);
 
   const [postType, setPostType] = useState<PostType>('project');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -74,8 +133,61 @@ export function CommunityWrite() {
   // 추후 API 확장 시 createBoard 호출부에 함께 전달하도록 변경할 것.
   const [settings, setSettings] = useState<PostSettings>({});
   const [submitting, setSubmitting] = useState(false);
+  // 수정 모드에서 기존 게시글 불러오는 중 여부
+  const [loadingPost, setLoadingPost] = useState(isEditMode);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // editId 변화에 따라 폼 상태 동기화
+  // - 신규 작성(id 없음): 빈 폼으로 초기화
+  // - 수정(id 있음): 기존 게시글 불러와 프리필
+  useEffect(() => {
+    // 신규 작성 모드: 폼 초기화 (수정 → 새 글로 전환 시 잔존 데이터 제거)
+    if (!isEditMode || editId === null) {
+      setTitle('');
+      setContent('');
+      setPostType('project');
+      setIsRecruiting(true);
+      setSettings({});
+      setLoadingPost(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingPost(true);
+    getBoardDetail(editId)
+      .then((res) => {
+        if (cancelled) return;
+        if (res.isSuccess && res.result) {
+          const p = res.result;
+          setTitle(p.title ?? '');
+          setContent(p.content ?? '');
+          setPostType(boardTypeToPostType[p.boardType] ?? 'project');
+          // 모집 상태: projectStatus 우선, 없으면 로컬 저장값 폴백
+          if (p.projectStatus) {
+            setIsRecruiting(p.projectStatus === 'RECRUITING');
+          }
+          // 설정 모달 프리필 (studyTag만 역매핑 가능, 스택은 분야만 알 수 있어 복원 생략)
+          setSettings({
+            studyTags: p.studyTag ? [apiToStudyTag[p.studyTag]] : [],
+          });
+        } else {
+          alert('게시글을 불러오지 못했습니다.');
+          navigate('/community');
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        alert('게시글을 불러오는 중 오류가 발생했습니다.');
+        navigate('/community');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPost(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditMode, editId, navigate]);
 
   // HTML 본문에서 텍스트만 추출해 비어있는지 확인
   const isContentEmpty = (html: string): boolean => {
@@ -96,25 +208,105 @@ export function CommunityWrite() {
 
     setSubmitting(true);
     try {
-      const res = await createBoard({
+      // 백엔드 요구 필드:
+      //   title, content, boardType (필수)
+      //   studyTag (nullable), projectStatus (OPEN/CLOSED), techFields[], platformTypes[]
+      //
+      // 사용자 입력 매핑은 최소만 구현하고 나머지는 안전한 기본값으로 보냄:
+      //   - projectStatus: 모집 토글에서 가져옴 (PROJECT 타입일 때만 의미 있음)
+      //   - studyTag / techFields / platformTypes: UI 매핑 미구현 → null / [] 전송
+      //   - 모집 인원, 스택 등 settings 모달 값은 백엔드 전송에 포함하지 않음
+      // ===== settings 모달 입력 → 백엔드 필드 매핑 =====
+      const boardType = postTypeToBoardType[postType];
+
+      // studyTag: STUDY 타입에서만 의미 있음. studyTags 배열의 첫 값을 enum 변환
+      const firstStudyTag = settings.studyTags?.[0] as StudyTag | undefined;
+      const studyTag =
+        boardType === 'STUDY' && firstStudyTag
+          ? studyTagToApi[firstStudyTag]
+          : null;
+
+      // projectStatus: STUDY/PROJECT 에서 모집 토글로부터 도출. FORUM은 null
+      const projectStatus: ProjectStatus | null =
+        boardType !== 'FORUM'
+          ? isRecruiting
+            ? 'RECRUITING'
+            : 'CLOSED'
+          : null;
+
+      // techFields: PROJECT에서만 — 구인 스택 배열을 분야(BACKEND/FRONTED/AI/ETC) 집합으로 변환
+      const techFields =
+        boardType === 'PROJECT' ? deriveTechFields(settings.recruitStacks) : [];
+
+      // platformTypes: 현재 UI에 입력이 없어 빈 배열로 전송
+      const platformTypes: PlatformType[] = [];
+
+      const payload = {
         title: title.trim(),
         content,
-        boardType: postTypeToBoardType[postType],
-      });
-      if (res.isSuccess) {
-        // 모집 상태는 백엔드 미지원 → 시연용 로컬 저장 (자유게시판 제외)
-        if (postType !== 'free' && res.result?.boardId !== undefined) {
-          setRecruitStatus(
-            res.result.boardId,
-            isRecruiting ? 'RECRUITING' : 'COMPLETED'
+        boardType,
+        studyTag,
+        projectStatus,
+        techFields,
+        platformTypes,
+      };
+
+      if (isEditMode && editId !== null) {
+        // ===== 수정 =====
+        const res = await updateBoard(editId, payload);
+        console.log('[CommunityWrite] updateBoard 응답:', res);
+        if (res.isSuccess) {
+          if (postType !== 'free') {
+            setRecruitStatus(
+              editId,
+              isRecruiting ? 'RECRUITING' : 'COMPLETED'
+            );
+          }
+          navigate(`/community/${editId}`);
+        } else {
+          alert(
+            `게시글 수정 실패: ${res.code || ''} ${res.message || '알 수 없는 오류'}`
           );
         }
-        navigate('/community');
       } else {
-        alert(res.message || '게시글 등록에 실패했습니다.');
+        // ===== 신규 작성 =====
+        const res = await createBoard(payload);
+        console.log('[CommunityWrite] createBoard 응답:', res);
+        if (res.isSuccess) {
+          // 모집 상태는 백엔드 미지원 → 시연용 로컬 저장 (자유게시판 제외)
+          if (postType !== 'free' && res.result?.postId !== undefined) {
+            setRecruitStatus(
+              res.result.postId,
+              isRecruiting ? 'RECRUITING' : 'COMPLETED'
+            );
+          }
+          navigate('/community');
+        } else {
+          alert(
+            `게시글 등록 실패: ${res.code || ''} ${res.message || '알 수 없는 오류'}`
+          );
+        }
       }
-    } catch {
-      alert('게시글 등록 중 오류가 발생했습니다.');
+    } catch (e: unknown) {
+      const err = e as {
+        response?: {
+          status?: number;
+          data?: { code?: string; message?: string; result?: unknown };
+        };
+      };
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      const actionLabel = isEditMode ? '게시글 수정' : '게시글 등록';
+      console.error(`[CommunityWrite] ${actionLabel} 에러:`, e);
+      console.error('[CommunityWrite] 응답 status:', status);
+      console.error('[CommunityWrite] 응답 data 전체:', data);
+      alert(
+        `${actionLabel} 중 오류\nstatus: ${status ?? '?'}\ncode: ${data?.code ?? '?'}\nmessage: ${data?.message ?? ''}\nresult: ${
+          typeof data?.result === 'string'
+            ? data.result
+            : JSON.stringify(data?.result ?? '')
+        }`
+      );
     } finally {
       setSubmitting(false);
     }
@@ -143,6 +335,26 @@ export function CommunityWrite() {
   const showRecruitToggle = postType !== 'free';
   const showSettingButton = postType !== 'free';
 
+  // 수정 모드: 기존 게시글 로딩 중
+  if (loadingPost) {
+    return (
+      <main
+        style={{
+          width: '100%',
+          minHeight: '100vh',
+          background: '#F0F9FF',
+          paddingTop: 46,
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
+        <div style={{ marginTop: 80, color: '#828282', fontSize: 16 }}>
+          게시글을 불러오는 중...
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main
       style={{
@@ -154,7 +366,7 @@ export function CommunityWrite() {
     >
       <div style={{ width: 1200, margin: '0 auto' }}>
         <h1 style={{ fontSize: 30, fontWeight: 700, marginBottom: 48 }}>
-          게시글 작성
+          {isEditMode ? '게시글 수정' : '게시글 작성'}
         </h1>
 
         <section
@@ -369,7 +581,13 @@ export function CommunityWrite() {
                   cursor: submitting ? 'not-allowed' : 'pointer',
                 }}
               >
-                {submitting ? '등록 중...' : '등록'}
+                {submitting
+                  ? isEditMode
+                    ? '수정 중...'
+                    : '등록 중...'
+                  : isEditMode
+                    ? '수정'
+                    : '등록'}
               </button>
             </div>
           </div>
@@ -546,8 +764,13 @@ function PostSettingModal({
                 <CheckBoxButton
                   key={tag}
                   label={tag}
-                  checked={studyTags.includes(tag)}
-                  onClick={() => toggleArrayValue(tag, studyTags, setStudyTags)}
+                  checked={studyTags[0] === tag}
+                  onClick={() => {
+                    // 단일 선택: 이미 선택된 항목을 다시 누르면 해제, 아니면 그 값으로 교체
+                    setStudyTags(studyTags[0] === tag ? [] : [tag]);
+                    // 자격증이 아닐 때 자격증 유형은 비움
+                    if (tag !== '자격증') setCertificateTypes([]);
+                  }}
                 />
               ))}
             </div>

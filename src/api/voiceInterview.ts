@@ -58,6 +58,9 @@ export const getVoiceAnswer = async (
  * 음성 답변 저장
  * POST /api/v1/questions/{questionId}/answers/voice
  * (multipart/form-data — webm 또는 mp3 오디오 파일)
+ *
+ * Content-Type을 undefined로 명시해야 client.ts의 기본 application/json 헤더가
+ * 제거되고 axios가 FormData에 맞게 boundary 포함한 multipart 헤더를 자동 설정함.
  */
 export const saveVoiceAnswer = async (
   questionId: number,
@@ -71,8 +74,10 @@ export const saveVoiceAnswer = async (
     formData,
     {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': undefined as unknown as string,
       },
+      // axios가 FormData를 JSON.stringify 하지 않도록 변환 비활성화
+      transformRequest: (data) => data,
     }
   );
   return response.data;
@@ -201,5 +206,10 @@ export const getVoiceReports = async (
   const response = await client.get<ApiResponse<ReportListResult>>(
     `/api/v1/reports?${queryParams.toString()}`
   );
-  return response.data.result?.data ?? [];
+  const items = response.data.result?.data ?? [];
+  // 백엔드 응답에 questionCount가 없을 수 있어 기본값 보정
+  return items.map((item) => ({
+    ...item,
+    questionCount: item.questionCount ?? 0,
+  }));
 };

@@ -89,9 +89,31 @@ export function RichTextEditor({
   };
 
   const insertImage = () => {
-    const url = window.prompt('이미지 URL을 입력하세요', 'https://');
-    if (!url) return;
-    editor.chain().focus().setImage({ src: url }).run();
+    // PC에서 이미지 파일 선택 → base64로 본문에 삽입
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      // 5MB 이상 거부 (base64로 직렬화되면 ~33% 더 커져서 전송 부담)
+      const MAX_BYTES = 5 * 1024 * 1024;
+      if (file.size > MAX_BYTES) {
+        alert('이미지 크기가 너무 큽니다 (최대 5MB).');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        if (typeof dataUrl !== 'string') return;
+        editor.chain().focus().setImage({ src: dataUrl }).run();
+      };
+      reader.onerror = () => {
+        alert('이미지를 읽지 못했습니다.');
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
   };
 
   return (

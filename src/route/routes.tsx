@@ -16,11 +16,6 @@ import { OtherProfile } from '../pages/Profile/OtherProfile';
 
 // 커뮤니티
 import { CommunityList } from '../pages/Community/CommunityList';
-import { CommunityWrite } from '../pages/Community/CommunityWrite';
-import { CommunityDetail } from '../pages/Community/CommunityDetail';
-
-// 커뮤니티
-import { CommunityList } from '../pages/Community/CommunityList';
 import { CommunityDetail } from '../pages/Community/CommunityDetail';
 import { CommunityWrite } from '../pages/Community/CommunityWrite';
 
