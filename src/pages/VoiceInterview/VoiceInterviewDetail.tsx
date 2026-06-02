@@ -132,7 +132,33 @@ export function VoiceInterviewDetail() {
             .then((mp3Blob) =>
               saveVoiceAnswer(question.questionId, mp3Blob, 'answer.mp3')
             )
-            .catch((e) => console.error('음성 답변 저장 실패', e));
+            .then((res) => {
+              console.log(
+                '[VoiceInterview] saveVoiceAnswer 응답',
+                question.questionId,
+                res
+              );
+              if (!res.isSuccess) {
+                console.warn(
+                  '[VoiceInterview] 음성 답변 저장 실패 (응답 isSuccess=false)',
+                  res
+                );
+              }
+            })
+            .catch((e: unknown) => {
+              const err = e as {
+                response?: { status?: number; data?: unknown };
+              };
+              console.error(
+                '[VoiceInterview] 음성 답변 저장 에러',
+                question.questionId,
+                'status:',
+                err?.response?.status,
+                'data:',
+                err?.response?.data,
+                e
+              );
+            });
         }
       };
 
