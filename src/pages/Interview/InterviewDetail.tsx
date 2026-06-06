@@ -231,7 +231,13 @@ export function InterviewDetail() {
     try {
       const response = await deleteAnswerApi(answerId);
       if (response.isSuccess) {
-        fetchAnswersForQuestion(questionId);
+        setQuestions((prev) =>
+          prev.map((q) =>
+            q.questionId === questionId
+              ? { ...q, answers: q.answers.filter((a) => a.answerId !== answerId) }
+              : q
+          )
+        );
       }
     } catch {
       alert('답변 삭제에 실패했습니다. 다시 시도해주세요.');
