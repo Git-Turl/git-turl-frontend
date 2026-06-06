@@ -9,6 +9,7 @@ import {
   getRepositories,
   type GitTurlHistory,
 } from '../../api/member';
+import { enumListToStacks } from '../../utils/stackMapping';
 import defaultProfile from '../../assets/img/img_profile.svg';
 
 export function MyPage() {
@@ -17,11 +18,13 @@ export function MyPage() {
     nickname: string;
     githubId: string;
     techStack: 'frontend' | 'backend' | 'ai';
+    preferredStacks: string[];
   }>({
     profileImage: defaultProfile,
     nickname: '로딩 중...',
     githubId: '',
     techStack: 'backend',
+    preferredStacks: [],
   });
 
   const [loading, setLoading] = useState(true);
@@ -76,6 +79,7 @@ export function MyPage() {
           nickname: profile?.nickname || '사용자',
           githubId: profile?.githubId || '',
           techStack,
+          preferredStacks: enumListToStacks(profile?.techStackList ?? []),
         });
 
         setLoading(false);
@@ -130,6 +134,7 @@ export function MyPage() {
               nickname={profileData.nickname}
               githubId={profileData.githubId}
               techStack={profileData.techStack}
+              preferredStacks={profileData.preferredStacks}
             />
 
             {/* 깃털 히스토리 */}

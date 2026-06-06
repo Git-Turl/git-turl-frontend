@@ -12,6 +12,7 @@ interface ProfileCardProps {
   nickname: string;
   githubId: string;
   techStack: string;
+  preferredStacks?: string[];
 }
 
 export function ProfileCard({
@@ -19,13 +20,14 @@ export function ProfileCard({
   nickname,
   githubId,
   techStack,
+  preferredStacks = [],
 }: ProfileCardProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [profileData, setProfileData] = useState({
     nickname,
     profileImage,
     techStack,
-    preferredStacks: [] as string[],
+    preferredStacks,
     notificationsEnabled: true,
     commentNotificationsEnabled: true,
   });
