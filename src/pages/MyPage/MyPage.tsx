@@ -17,7 +17,7 @@ export function MyPage() {
     profileImage: string;
     nickname: string;
     githubId: string;
-    techStack: 'frontend' | 'backend' | 'ai';
+    techStack: 'frontend' | 'backend' | 'AI';
     preferredStacks: string[];
   }>({
     profileImage: defaultProfile,
@@ -70,9 +70,9 @@ export function MyPage() {
         }
 
         // jobType을 techStack으로 변환
-        let techStack: 'frontend' | 'backend' | 'ai' = 'backend';
+        let techStack: 'frontend' | 'backend' | 'AI' = 'backend';
         if (profile?.jobType === 'FRONTEND') techStack = 'frontend';
-        else if (profile?.jobType === 'AI') techStack = 'ai';
+        else if (profile?.jobType === 'AI') techStack = 'AI';
 
         setProfileData({
           profileImage: imageUrl,

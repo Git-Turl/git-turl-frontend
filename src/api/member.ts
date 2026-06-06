@@ -56,10 +56,10 @@ export type OnboardingRequest = {
   techStackList: TechStack[];
 };
 
-// 프로필 수정용 요청 타입 (선택적 필드)
+// 프로필 수정용 요청 타입 (선택적 필드 — null 은 "변경 없음"을 의미)
 export type ProfileRequest = {
-  nickname?: string;
-  jobType?: JobType;
+  nickname?: string | null;
+  jobType?: JobType | null;
   techStackList?: TechStack[] | null;
 };
 
