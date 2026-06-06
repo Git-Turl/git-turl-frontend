@@ -75,3 +75,14 @@ export const stacksToEnumList = (stacks: string[]): TechStack[] => {
   // 중복 제거 (ETC가 여러 개일 수 있음)
   return Array.from(new Set(enums));
 };
+
+// API enum → 표시명 역방향 변환
+const enumToStackMap: Partial<Record<TechStack, string>> = Object.fromEntries(
+  Object.entries(stackToEnum).map(([display, enumVal]) => [enumVal, display])
+) as Partial<Record<TechStack, string>>;
+
+export const enumToStack = (enumVal: TechStack): string =>
+  enumToStackMap[enumVal] ?? enumVal;
+
+export const enumListToStacks = (enums: TechStack[]): string[] =>
+  enums.map(enumToStack);

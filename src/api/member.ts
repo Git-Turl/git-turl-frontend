@@ -70,7 +70,7 @@ export type MyProfile = {
   profileImage: string;
   jobType: JobType;
   githubId: string;
-  techStack: TechStack[];
+  techStackList: TechStack[];
 };
 
 export type ProfileImageResult = {

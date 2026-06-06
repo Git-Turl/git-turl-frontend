@@ -122,7 +122,11 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave, onImage
     );
   };
 
-  const isProfileValid = nickname.trim().length > 0 && nicknameStatus === 'available' && techStack;
+  const nicknameUnchanged = nickname.trim() === currentProfile.nickname.trim();
+  const isProfileValid =
+    nickname.trim().length > 0 &&
+    techStack &&
+    (nicknameUnchanged || nicknameStatus === 'available');
 
   const handleSave = () => {
     if (isProfileValid) {
