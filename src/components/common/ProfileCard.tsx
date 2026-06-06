@@ -40,12 +40,16 @@ export function ProfileCard({
         return;
       }
 
-      const techStackList = stacksToEnumList(data.preferredStacks);
+      const newTechStackList = stacksToEnumList(data.preferredStacks);
+      const prevTechStackList = stacksToEnumList(profileData.preferredStacks);
+      const stacksChanged =
+        JSON.stringify([...newTechStackList].sort()) !==
+        JSON.stringify([...prevTechStackList].sort());
 
       const response = await updateProfile({
-        nickname: data.nickname,
-        jobType,
-        techStackList,
+        nickname: data.nickname !== profileData.nickname ? data.nickname : null,
+        jobType: data.techStack !== profileData.techStack ? jobType : null,
+        techStackList: stacksChanged ? newTechStackList : null,
       });
 
       if (response.isSuccess) {
@@ -132,14 +136,16 @@ export function ProfileCard({
         </nav>
       </Card>
 
-      {/* 설정 모달 */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        currentProfile={profileData}
-        onSave={handleSaveSettings}
-        onImageUpdate={handleImageUpdate}
-      />
+      {/* 설정 모달 — 열릴 때마다 새로 마운트해 최신 profileData로 초기화 */}
+      {isSettingsOpen && (
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          currentProfile={profileData}
+          onSave={handleSaveSettings}
+          onImageUpdate={handleImageUpdate}
+        />
+      )}
     </div>
   );
 }
