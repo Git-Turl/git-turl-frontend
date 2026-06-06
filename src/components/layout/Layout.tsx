@@ -60,6 +60,19 @@ export function Layout() {
     fetchUserProfile();
   }, []);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { name, avatar } = (e as CustomEvent<{ name?: string; avatar?: string }>).detail;
+      setUserProfile((prev) => ({
+        ...prev,
+        ...(name !== undefined && { name }),
+        ...(avatar !== undefined && { avatar }),
+      }));
+    };
+    window.addEventListener('profile-updated', handler);
+    return () => window.removeEventListener('profile-updated', handler);
+  }, []);
+
   return (
     <div className="min-h-screen bg-sky-50">
       <AppSidebar

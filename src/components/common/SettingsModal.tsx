@@ -24,11 +24,12 @@ interface SettingsModalProps {
     notificationsEnabled: boolean;
     commentNotificationsEnabled: boolean;
   }) => void;
+  onImageUpdate?: (imageUrl: string) => void;
 }
 
 type TabType = 'profile' | 'notification';
 
-export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, currentProfile, onSave, onImageUpdate }: SettingsModalProps) {
   const navigate = useNavigate();
   const logout = useAuthStore((s) => s.logout);
   const [activeTab, setActiveTab] = useState<TabType>('profile');
@@ -95,7 +96,10 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave }: Setti
           // 성공 시 미리보기 업데이트
           const reader = new FileReader();
           reader.onloadend = () => {
-            setProfileImage(reader.result as string);
+            const dataUrl = reader.result as string;
+            setProfileImage(dataUrl);
+            onImageUpdate?.(dataUrl);
+            window.dispatchEvent(new CustomEvent('profile-updated', { detail: { avatar: dataUrl } }));
           };
           reader.readAsDataURL(file);
           alert('프로필 사진이 성공적으로 변경되었습니다.');

@@ -37,17 +37,19 @@ export function ProfileCard({
         alert('희망분야 값이 올바르지 않습니다.');
         return;
       }
-      
+
       const techStackList = stacksToEnumList(data.preferredStacks);
-      
+
       const response = await updateProfile({
         nickname: data.nickname,
         jobType,
         techStackList,
       });
-      
+
       if (response.isSuccess) {
         setProfileData(data);
+        localStorage.setItem('myNickname', data.nickname);
+        window.dispatchEvent(new CustomEvent('profile-updated', { detail: { name: data.nickname } }));
         alert('프로필이 성공적으로 수정되었습니다.');
       } else {
         alert(response.message || '프로필 수정에 실패했습니다.');
@@ -57,6 +59,10 @@ export function ProfileCard({
       alert(errorMessage);
       console.error('프로필 수정 실패:', error);
     }
+  };
+
+  const handleImageUpdate = (imageUrl: string) => {
+    setProfileData((prev) => ({ ...prev, profileImage: imageUrl }));
   };
 
   return (
@@ -130,6 +136,7 @@ export function ProfileCard({
         onClose={() => setIsSettingsOpen(false)}
         currentProfile={profileData}
         onSave={handleSaveSettings}
+        onImageUpdate={handleImageUpdate}
       />
     </div>
   );
