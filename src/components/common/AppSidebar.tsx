@@ -53,7 +53,7 @@ export function AppSidebar({
   };
 
   const navItems = [
-    { id: 'home', icon: Home, label: 'Home', path: '/' },
+    { id: 'home', icon: Home, label: 'Home', path: '/home' },
     { id: 'analytics', icon: BarChart3, label: 'Analytics', path: '/analytics' },
     { id: 'interview', icon: MessageSquare, label: 'Interview', path: '/interview', hasPopup: true },
     { id: 'community', icon: Users, label: 'Community', path: '/community' },
@@ -61,8 +61,8 @@ export function AppSidebar({
   ];
 
   const isActive = (path: string) => {
-    if (path === '/') {
-      return location.pathname === path;
+    if (path === '/home') {
+      return location.pathname === '/home' || location.pathname === '/';
     }
     if (path === '/interview') {
       return location.pathname.startsWith('/interview') || location.pathname.startsWith('/voice-interview');
