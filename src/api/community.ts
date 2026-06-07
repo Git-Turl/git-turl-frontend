@@ -288,14 +288,33 @@ export const deleteBoard = async (
 };
 
 /**
- * 게시글 좋아요 토글
+ * 게시글 좋아요 추가
  * POST /api/v1/boards/{boardId}/likes
- * 응답 result.liked: true(추가) / false(취소), likeCount: 최신 카운트
+ * 응답 result.liked: true, likeCount: 최신 카운트
  */
 export const toggleBoardLike = async (
   boardId: number
 ): Promise<ApiResponse<BoardLikeResult>> => {
   const response = await client.post<ApiResponse<BoardLikeResult>>(
+    `/api/v1/boards/${boardId}/likes`
+  );
+  return response.data;
+};
+
+// 좋아요 취소 응답 — 필드명이 isLiked (POST 응답의 liked 와 다름).
+export type BoardUnlikeResult = {
+  isLiked: boolean;
+  likeCount: number;
+};
+
+/**
+ * 게시글 좋아요 취소
+ * DELETE /api/v1/boards/{boardId}/likes
+ */
+export const deleteBoardLike = async (
+  boardId: number
+): Promise<ApiResponse<BoardUnlikeResult>> => {
+  const response = await client.delete<ApiResponse<BoardUnlikeResult>>(
     `/api/v1/boards/${boardId}/likes`
   );
   return response.data;
@@ -366,13 +385,32 @@ export const deleteComment = async (
 };
 
 /**
- * 댓글 좋아요 토글
+ * 댓글 좋아요 추가
  * POST /api/v1/comments/{commentId}/likes
  */
 export const toggleCommentLike = async (
   commentId: number
 ): Promise<ApiResponse<CommentLikeResult>> => {
   const response = await client.post<ApiResponse<CommentLikeResult>>(
+    `/api/v1/comments/${commentId}/likes`
+  );
+  return response.data;
+};
+
+// 댓글 좋아요 취소 응답 — 필드명이 isLiked.
+export type CommentUnlikeResult = {
+  isLiked: boolean;
+  likeCount: number;
+};
+
+/**
+ * 댓글 좋아요 취소
+ * DELETE /api/v1/comments/{commentId}/likes
+ */
+export const deleteCommentLike = async (
+  commentId: number
+): Promise<ApiResponse<CommentUnlikeResult>> => {
+  const response = await client.delete<ApiResponse<CommentUnlikeResult>>(
     `/api/v1/comments/${commentId}/likes`
   );
   return response.data;

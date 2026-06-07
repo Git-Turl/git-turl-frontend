@@ -12,7 +12,9 @@ import {
 import {
   createComment,
   deleteBoard,
+  deleteBoardLike,
   deleteComment,
+  deleteCommentLike,
   getBoardDetail,
   getComments,
   toggleBoardLike,
@@ -56,6 +58,8 @@ export function CommunityDetail() {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [likeBusy, setLikeBusy] = useState(false);
+  // 좋아요 처리 중인 commentId 집합 — 같은 댓글 더블클릭 시 응답 순서 어긋남 방지.
+  const [commentLikeBusy, setCommentLikeBusy] = useState<Set<number>>(new Set());
   const [menuOpen, setMenuOpen] = useState(false);
 
   const [comments, setComments] = useState<Comment[]>([]);
@@ -244,7 +248,19 @@ export function CommunityDetail() {
   };
 
   const handleToggleCommentLike = async (commentId: number) => {
-    // 낙관적 업데이트: 응답 오면 서버 값으로 교체
+    // 같은 댓글이 이미 처리 중이면 무시 (더블클릭 방지).
+    if (commentLikeBusy.has(commentId)) return;
+    setCommentLikeBusy((prev) => {
+      const next = new Set(prev);
+      next.add(commentId);
+      return next;
+    });
+
+    // 현재 상태 캡처 — 분기 결정에 사용.
+    const target = comments.find((c) => c.commentId === commentId);
+    const prevLiked = !!target?.isLiked;
+
+    // 낙관적 업데이트.
     setComments((prev) =>
       prev.map((c) =>
         c.commentId === commentId
@@ -257,22 +273,29 @@ export function CommunityDetail() {
       )
     );
     try {
-      const res = await toggleCommentLike(commentId);
+      // 현재 상태에 따라 POST(추가) / DELETE(취소) 분기.
+      const res = prevLiked
+        ? await deleteCommentLike(commentId)
+        : await toggleCommentLike(commentId);
       if (res.isSuccess && res.result) {
-        const { liked, likeCount } = res.result;
+        // likeCount 만 서버 값으로 동기화. isLiked 는 옵티미스틱 토글값 그대로.
+        const { likeCount } = res.result;
         setComments((prev) =>
           prev.map((c) =>
-            c.commentId === commentId ? { ...c, isLiked: liked, likeCount } : c
+            c.commentId === commentId ? { ...c, likeCount } : c
           )
         );
       } else {
-        // 실패 → 롤백
-        loadComments(commentPage);
-        alert(res.message || '좋아요 처리에 실패했습니다.');
+        console.warn('[CommunityDetail] 댓글 좋아요 처리 실패', res.message);
       }
     } catch (e) {
-      console.error('[CommunityDetail] toggleCommentLike 에러', e);
-      loadComments(commentPage);
+      console.error('[CommunityDetail] 댓글 좋아요 처리 에러', e);
+    } finally {
+      setCommentLikeBusy((prev) => {
+        const next = new Set(prev);
+        next.delete(commentId);
+        return next;
+      });
     }
   };
 
@@ -396,19 +419,24 @@ export function CommunityDetail() {
                 setLikeCount(prevLiked ? prevCount - 1 : prevCount + 1);
                 setLikeBusy(true);
                 try {
-                  const res = await toggleBoardLike(postId);
+                  // 현재 상태(prevLiked)에 따라 분기:
+                  // - 좋아요 추가: POST (toggleBoardLike)
+                  // - 좋아요 취소: DELETE (deleteBoardLike)
+                  const res = prevLiked
+                    ? await deleteBoardLike(postId)
+                    : await toggleBoardLike(postId);
                   if (res.isSuccess && res.result) {
-                    setLiked(res.result.liked);
+                    // 서버 응답으로 likeCount 동기화 (정확한 값 사용).
+                    // liked 값은 옵티미스틱 토글 결과 그대로 유지 (POST는 liked, DELETE는 isLiked 로 필드명 다름 + 신뢰도 이슈).
                     setLikeCount(res.result.likeCount);
                   } else {
-                    setLiked(prevLiked);
-                    setLikeCount(prevCount);
-                    alert(res.message || '좋아요 처리에 실패했습니다.');
+                    console.warn(
+                      '[CommunityDetail] 좋아요 처리 실패',
+                      res.message
+                    );
                   }
                 } catch (e) {
-                  console.error('[CommunityDetail] toggleBoardLike 에러', e);
-                  setLiked(prevLiked);
-                  setLikeCount(prevCount);
+                  console.error('[CommunityDetail] 좋아요 처리 에러', e);
                 } finally {
                   setLikeBusy(false);
                 }
