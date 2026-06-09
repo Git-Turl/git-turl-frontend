@@ -515,7 +515,7 @@ export function CommunityDetail() {
           }}
         >
           <AuthorLink
-            writerName={post.authorName}
+            writerId={post.authorId}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
           >
             <div
@@ -820,7 +820,7 @@ function CommentRow({
           />
         )}
         <AuthorLink
-          writerName={comment.writerName}
+          writerId={comment.writerId}
           style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}
         >
           <div
@@ -836,7 +836,7 @@ function CommentRow({
         </AuthorLink>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, color: '#4A5565', marginBottom: 4 }}>
-            <AuthorLink writerName={comment.writerName}>
+            <AuthorLink writerId={comment.writerId}>
               {comment.writerName}
             </AuthorLink>
             {' | '}
