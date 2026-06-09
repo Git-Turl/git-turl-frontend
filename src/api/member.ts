@@ -261,36 +261,48 @@ export const getMyHistory = async (): Promise<ApiResponse<GitTurlHistory>> => {
 
 // ========== 내 게시글/댓글 조회 ==========
 
-// 백엔드 응답 boardType 이 'FREE' 로 오기도 함 (community 의 BoardType 은 'FORUM').
-// 두 케이스 모두 허용.
-export type MyContentBoardType = 'FORUM' | 'STUDY' | 'PROJECT' | 'FREE';
+export type MemberContentBoardType = 'FORUM' | 'STUDY' | 'PROJECT';
 
-export type MyBoardSort = 'latest' | 'like';
+export type MemberBoardSort = 'latest' | 'like';
 
-export type MyBoardItem = {
-  postId: number;
+// 게시글 목록 응답 — community 게시글 목록과 동일한 스키마.
+export type MemberBoardItem = {
+  boardId: number;
   title: string;
-  boardType: MyContentBoardType;
+  content: string;
+  imageUrl: string | null;
+  boardType: MemberContentBoardType;
+  writerName: string;
   likeCount: number;
-  commentCount: number;
   createdAt: string;
+  // 스터디/프로젝트 한정 (옵셔널)
+  studyTag?: string | null;
+  certificateType?: string | null;
+  projectStatus?: string | null;
+  recruitCount?: number;
+  recruitDeadline?: string | null;
+  recruitStacks?: string[];
+  projectStacks?: string[];
+  platformTypes?: string[];
 };
 
-export type MyBoardListResult = {
-  posts: MyBoardItem[];
-  page: number;
-  size: number;
-  totalCount: number;
+export type MemberBoardListResult = {
+  boardList: MemberBoardItem[];
+  listSize: number;
+  totalPage: number;
+  totalElements: number;
+  isFirst: boolean;
+  isLast: boolean;
 };
 
-export type MyContentParams = {
+export type MemberContentParams = {
   boardType?: 'FORUM' | 'STUDY' | 'PROJECT';
-  sort?: MyBoardSort;
+  sort?: MemberBoardSort;
   page?: number;
   size?: number;
 };
 
-const buildMyContentQuery = (params?: MyContentParams) => {
+const buildMyContentQuery = (params?: MemberContentParams) => {
   const qs = new URLSearchParams();
   if (params?.boardType) qs.append('boardType', params.boardType);
   if (params?.sort) qs.append('sort', params.sort);
@@ -305,29 +317,31 @@ const buildMyContentQuery = (params?: MyContentParams) => {
  * GET /api/v1/boards/me
  */
 export const getMyBoards = async (
-  params?: MyContentParams
-): Promise<ApiResponse<MyBoardListResult>> => {
-  const response = await client.get<ApiResponse<MyBoardListResult>>(
+  params?: MemberContentParams
+): Promise<ApiResponse<MemberBoardListResult>> => {
+  const response = await client.get<ApiResponse<MemberBoardListResult>>(
     `/api/v1/boards/me${buildMyContentQuery(params)}`
   );
   return response.data;
 };
 
-export type MyCommentItem = {
+export type MemberCommentItem = {
   commentId: number;
-  postId: number;
-  postTitle: string;
+  boardId: number;
+  boardTitle: string;
+  boardType: MemberContentBoardType;
   content: string;
-  boardType: MyContentBoardType;
   likeCount: number;
   createdAt: string;
 };
 
-export type MyCommentListResult = {
-  comments: MyCommentItem[];
-  page: number;
-  size: number;
-  totalCount: number;
+export type MemberCommentListResult = {
+  commentList: MemberCommentItem[];
+  listSize: number;
+  totalPage: number;
+  totalElements: number;
+  isFirst: boolean;
+  isLast: boolean;
 };
 
 /**
@@ -335,9 +349,9 @@ export type MyCommentListResult = {
  * GET /api/v1/comments/me
  */
 export const getMyComments = async (
-  params?: MyContentParams
-): Promise<ApiResponse<MyCommentListResult>> => {
-  const response = await client.get<ApiResponse<MyCommentListResult>>(
+  params?: MemberContentParams
+): Promise<ApiResponse<MemberCommentListResult>> => {
+  const response = await client.get<ApiResponse<MemberCommentListResult>>(
     `/api/v1/comments/me${buildMyContentQuery(params)}`
   );
   return response.data;
@@ -350,9 +364,9 @@ export const getMyComments = async (
  */
 export const getMemberBoards = async (
   memberId: number,
-  params?: MyContentParams
-): Promise<ApiResponse<MyBoardListResult>> => {
-  const response = await client.get<ApiResponse<MyBoardListResult>>(
+  params?: MemberContentParams
+): Promise<ApiResponse<MemberBoardListResult>> => {
+  const response = await client.get<ApiResponse<MemberBoardListResult>>(
     `/api/v1/boards/members/${memberId}${buildMyContentQuery(params)}`
   );
   return response.data;
@@ -365,9 +379,9 @@ export const getMemberBoards = async (
  */
 export const getMemberComments = async (
   memberId: number,
-  params?: MyContentParams
-): Promise<ApiResponse<MyCommentListResult>> => {
-  const response = await client.get<ApiResponse<MyCommentListResult>>(
+  params?: MemberContentParams
+): Promise<ApiResponse<MemberCommentListResult>> => {
+  const response = await client.get<ApiResponse<MemberCommentListResult>>(
     `/api/v1/comments/members/${memberId}${buildMyContentQuery(params)}`
   );
   return response.data;
