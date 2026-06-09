@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import {
   Search,
   Plus,
@@ -110,9 +110,29 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+// HTML 본문에서 첫 번째 <img> src 추출. imageUrl 이 비어있을 때 fallback.
+function extractFirstImage(html: string): string | null {
+  if (!html) return null;
+  const m = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return m ? m[1] : null;
+}
+
+// 쿼리 파라미터 → 탭 매핑. 잘못된 값이면 기본 study.
+const tabFromParam = (raw: string | null): TabType => {
+  if (raw === 'project' || raw === 'free' || raw === 'study') return raw;
+  return 'study';
+};
+
 export function CommunityList() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabType>('study');
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<TabType>(tabFromParam(tabParam));
+
+  // URL ?tab 이 바뀌면 activeTab 동기화 (이미 페이지에 있을 때 외부 링크로 이동 시).
+  useEffect(() => {
+    setActiveTab(tabFromParam(tabParam));
+  }, [tabParam]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1); // UI: 1-indexed, API: 0-indexed
 
@@ -727,24 +747,28 @@ function PostRow({
         </div>
       </div>
 
-      <div
-        style={{
-          width: 130,
-          height: 92,
-          background: post.imageUrl ? 'transparent' : '#E5E7EB',
-          borderRadius: 10,
-          flexShrink: 0,
-          overflow: 'hidden',
-        }}
-      >
-        {post.imageUrl && (
-          <img
-            src={post.imageUrl}
-            alt=""
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        )}
-      </div>
+      {(() => {
+        // imageUrl 우선, 없으면 content 안 첫 <img>
+        const preview = post.imageUrl ?? extractFirstImage(post.content);
+        if (!preview) return null;
+        return (
+          <div
+            style={{
+              width: 130,
+              height: 92,
+              borderRadius: 10,
+              flexShrink: 0,
+              overflow: 'hidden',
+            }}
+          >
+            <img
+              src={preview}
+              alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
+        );
+      })()}
     </div>
   );
 }
