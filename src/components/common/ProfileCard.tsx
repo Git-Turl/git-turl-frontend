@@ -119,7 +119,7 @@ export function ProfileCard({
       <Card className="p-4 bg-white shadow-sm border border-sky-100">
         <nav className="space-y-2">
           <Link
-            to="/community"
+            to="/my-posts"
             className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-sky-50 transition-colors text-left"
           >
             <FileText className="w-5 h-5 text-sky-600" />
