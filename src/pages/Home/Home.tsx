@@ -11,15 +11,24 @@ import {
   MessageSquare,
   Calendar,
   Bookmark,
+  ThumbsUp,
 } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import {
+  getMyBoards,
+  getMyComments,
   getMyHistory,
   getMyProfile,
   getReportList,
   type GitTurlHistory,
+  type MyBoardItem,
+  type MyCommentItem,
   type ReportListItem,
 } from '../../api/member';
+import {
+  getRecommendProjects,
+  getRecommendStudies,
+} from '../../api/home';
 import gitturlLogo from '../../assets/logo/gitturl-logo.svg';
 
 // "2026-04-08T01:40:00" → "4시간 전" 형식 상대시각.
@@ -48,39 +57,135 @@ type StoredUserInfo = {
   avatar?: string;
 };
 
+// 추천 카드용 정규화 타입 — 스터디/프로젝트 어느 쪽에서 왔는지(kind) 까지 보관.
+type RecommendCard = {
+  kind: 'study' | 'project';
+  postId: number;
+  title: string;
+  category: string;
+  recruitCount: number;
+  currentCount: number;
+  likeCount: number;
+};
+
+// 카테고리별 아이콘/색 매핑. 백엔드가 소문자 'backend'/'frontend'/'ai' 로 보낼 거라 가정.
+const categoryStyle = (category: string) => {
+  const c = (category || '').toLowerCase();
+  if (c.includes('front'))
+    return { icon: Code, bgColor: '#ECF3FE', iconBg: '#6095FE' };
+  if (c.includes('back'))
+    return { icon: Server, bgColor: '#EFF8EF', iconBg: '#7EC481' };
+  if (c.includes('ai') || c.includes('ml'))
+    return { icon: Brain, bgColor: '#F4F2FE', iconBg: '#C2B6FC' };
+  return { icon: Code, bgColor: '#F3F4F6', iconBg: '#9CA3AF' };
+};
+
+// 카테고리 한글 라벨 (간단)
+const categoryLabel = (category: string) => {
+  const c = (category || '').toLowerCase();
+  if (c.includes('front')) return '프론트엔드';
+  if (c.includes('back')) return '백엔드';
+  if (c.includes('ai') || c.includes('ml')) return 'AI';
+  return category || '기타';
+};
+
+// kind 한글 라벨
+const kindLabel = (kind: 'study' | 'project') =>
+  kind === 'study' ? '스터디' : '프로젝트';
+
+// 머지된 배열을 셔플 → 앞 N개. Fisher–Yates.
+const pickRandom = <T,>(arr: T[], n: number): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a.slice(0, n);
+};
+
 export function Home() {
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
   const [history, setHistory] = useState<GitTurlHistory | null>(null);
   const [recentReports, setRecentReports] = useState<ReportListItem[]>([]);
+  const [recentBoards, setRecentBoards] = useState<MyBoardItem[]>([]);
+  const [recentComments, setRecentComments] = useState<MyCommentItem[]>([]);
+  const [recommendCards, setRecommendCards] = useState<RecommendCard[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // 깃털 히스토리 조회 — 일수 / 분석 리포트 / 면접 질문 카운트
-    let cancelledHistory = false;
+    let cancelled = false;
+
     getMyHistory()
       .then((res) => {
-        if (cancelledHistory) return;
+        if (cancelled) return;
         if (res.isSuccess && res.result) setHistory(res.result);
       })
-      .catch((err) => {
-        console.error('[home] history load failed', err);
-      });
+      .catch((err) => console.error('[home] history load failed', err));
 
-    // 최근 활동 — 분석 리포트 최근 5건
-    let cancelledReports = false;
     getReportList({ answerType: 'ALL', pageSize: 5 })
       .then((res) => {
-        if (cancelledReports) return;
-        if (res.isSuccess && res.result?.data) {
-          setRecentReports(res.result.data);
+        if (cancelled) return;
+        if (res.isSuccess && res.result?.data) setRecentReports(res.result.data);
+      })
+      .catch((err) => console.error('[home] reports load failed', err));
+
+    getMyBoards({ sort: 'latest', page: 0, size: 5 })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.isSuccess && res.result?.posts) setRecentBoards(res.result.posts);
+      })
+      .catch((err) => console.error('[home] my boards load failed', err));
+
+    getMyComments({ sort: 'latest', page: 0, size: 5 })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.isSuccess && res.result?.comments) {
+          setRecentComments(res.result.comments);
         }
       })
-      .catch((err) => {
-        console.error('[home] recent reports load failed', err);
-      });
+      .catch((err) => console.error('[home] my comments load failed', err));
+
+    // 추천 — 스터디 + 프로젝트 둘 다 받아오고, 모집중(자리 남음)만 필터 → 셔플 → 3개.
+    // 응답에 projectStatus 가 없어서 currentCount < recruitCount 로 모집중 판정.
+    Promise.all([
+      getRecommendStudies({ page: 0, size: 20 }),
+      getRecommendProjects({ page: 0, size: 20 }),
+    ])
+      .then(([studyRes, projectRes]) => {
+        if (cancelled) return;
+        const isRecruiting = (item: {
+          recruitCount: number;
+          currentCount: number;
+        }) => item.currentCount < item.recruitCount;
+
+        const studies = (studyRes.result?.studies ?? [])
+          .filter(isRecruiting)
+          .map<RecommendCard>((s) => ({
+            kind: 'study',
+            postId: s.postId,
+            title: s.title,
+            category: s.category,
+            recruitCount: s.recruitCount,
+            currentCount: s.currentCount,
+            likeCount: s.likeCount,
+          }));
+        const projects = (projectRes.result?.projects ?? [])
+          .filter(isRecruiting)
+          .map<RecommendCard>((p) => ({
+            kind: 'project',
+            postId: p.postId,
+            title: p.title,
+            category: p.category,
+            recruitCount: p.recruitCount,
+            currentCount: p.currentCount,
+            likeCount: p.likeCount,
+          }));
+        setRecommendCards(pickRandom([...studies, ...projects], 3));
+      })
+      .catch((err) => console.error('[home] recommend load failed', err));
 
     return () => {
-      cancelledHistory = true;
-      cancelledReports = true;
+      cancelled = true;
     };
   }, []);
 
@@ -121,44 +226,23 @@ export function Home() {
 
   const githubUsername = userInfo?.githubId ?? '';
 
-  const recommendedProjects = [
-    {
-      icon: Code,
-      bgColor: '#ECF3FE',
-      iconBg: '#6095FE',
-      title: '프로젝트명',
-      description: '프로젝트 설명',
-      tags: ['React', 'TypeScript', 'Next.js'],
-      tagBg: '#ECF3FE',
-      stars: 24,
-      views: 102,
-      recruits: 3,
-    },
-    {
-      icon: Server,
-      bgColor: '#EFF8EF',
-      iconBg: '#7EC481',
-      title: '프로젝트명',
-      description: '프로젝트 설명',
-      tags: ['Node.js', 'Nest.js', 'MongoDB'],
-      tagBg: '#EFF8EF',
-      stars: 18,
-      views: 85,
-      recruits: 2,
-    },
-    {
-      icon: Brain,
-      bgColor: '#F4F2FE',
-      iconBg: '#C2B6FC',
-      title: '프로젝트명',
-      description: '프로젝트 설명',
-      tags: ['Python', 'PyTorch', 'LangChain'],
-      tagBg: '#F4F2FE',
-      stars: 31,
-      views: 156,
-      recruits: 4,
-    },
-  ];
+  // 추천 카드 — API 응답 머지 + 랜덤 3개를 표시용 객체로 변환.
+  const recommendedProjects = recommendCards.map((c) => {
+    const { icon, bgColor, iconBg } = categoryStyle(c.category);
+    return {
+      postId: c.postId,
+      icon,
+      bgColor,
+      iconBg,
+      title: c.title,
+      description: `${kindLabel(c.kind)} · ${categoryLabel(c.category)}`,
+      tags: [kindLabel(c.kind), categoryLabel(c.category)],
+      tagBg: bgColor,
+      stars: c.likeCount,
+      views: c.currentCount,
+      recruits: c.recruitCount,
+    };
+  });
 
   // 모두 history API 에서 받아온 실데이터.
   const stats = [
@@ -187,13 +271,46 @@ export function Home() {
 
   // 최근 활동 — 현재 연동된 백엔드 API 중 분석 리포트 목록을 사용.
   // 추후 글/음성·텍스트 면접 활동까지 합치려면 백엔드 통합 엔드포인트 필요.
-  const recentActivities = recentReports.slice(0, 3).map((r) => ({
+  // 최근 활동: 분석 리포트 + 내 게시글 + 내 댓글 머지 → createdAt 내림차순 → 상위 5건.
+  type Activity = {
+    icon: typeof GitBranch;
+    iconBg: string;
+    iconColor: string;
+    title: string;
+    time: string;
+    createdAt: string;
+  };
+  const reportActivities: Activity[] = recentReports.map((r) => ({
     icon: GitBranch,
     iconBg: '#EDF3FE',
     iconColor: '#578EFE',
     title: `${r.reportTitle || r.repoName || '레포지터리'}를 분석했어요`,
     time: relativeTime(r.createdAt),
+    createdAt: r.createdAt,
   }));
+  const boardActivities: Activity[] = recentBoards.map((b) => ({
+    icon: MessageSquare,
+    iconBg: '#F3F0FD',
+    iconColor: '#854DDA',
+    title: `'${b.title}' 게시글을 작성했어요`,
+    time: relativeTime(b.createdAt),
+    createdAt: b.createdAt,
+  }));
+  const commentActivities: Activity[] = recentComments.map((c) => ({
+    icon: ThumbsUp,
+    iconBg: '#FEF7E6',
+    iconColor: '#FECA3F',
+    title: `'${c.postTitle}'에 댓글을 작성했어요`,
+    time: relativeTime(c.createdAt),
+    createdAt: c.createdAt,
+  }));
+  const recentActivities = [
+    ...reportActivities,
+    ...boardActivities,
+    ...commentActivities,
+  ]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
 
   return (
     <div
@@ -367,6 +484,8 @@ export function Home() {
           추천 프로젝트
         </h2>
         <button
+          type="button"
+          onClick={() => navigate('/community')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -385,11 +504,30 @@ export function Home() {
       </div>
 
       <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
-        {recommendedProjects.map((project, idx) => {
+        {recommendedProjects.length === 0 && (
+          <div
+            style={{
+              flex: 1,
+              padding: '24px 16px',
+              color: '#9CA3AF',
+              fontSize: 13,
+              textAlign: 'center',
+              background: 'white',
+              borderRadius: 16,
+              border: '1px solid #B8E6FE',
+            }}
+          >
+            추천 항목이 없어요.
+          </div>
+        )}
+        {recommendedProjects.map((project) => {
           const Icon = project.icon;
           return (
             <div
-              key={idx}
+              key={project.postId}
+              onClick={() => navigate(`/community/${project.postId}`)}
+              role="button"
+              tabIndex={0}
               style={{
                 flex: 1,
                 background: 'white',
@@ -399,6 +537,14 @@ export function Home() {
                 position: 'relative',
                 minWidth: 0,
                 boxSizing: 'border-box',
+                cursor: 'pointer',
+                transition: 'box-shadow 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
               }}
             >
               <button
