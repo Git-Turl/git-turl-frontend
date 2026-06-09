@@ -25,8 +25,11 @@ export function Layout() {
         const profileResponse = await getMyProfile();
         const profileData = profileResponse.result;
 
-        // 내 닉네임 저장 — 작성자 본인 여부 판별에 사용.
-        // (백엔드가 id 응답에 안 내려줘서 닉네임으로 비교)
+        // 내 memberId 저장 — 작성자 본인 여부 판별에 사용.
+        if (profileData?.id != null) {
+          localStorage.setItem('myMemberId', String(profileData.id));
+        }
+        // 닉네임도 같이 저장 (헤더/사이드바 표시용)
         if (profileData?.nickname) {
           localStorage.setItem('myNickname', profileData.nickname);
         }
