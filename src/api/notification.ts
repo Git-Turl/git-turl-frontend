@@ -213,37 +213,35 @@ export const markNotificationAsRead = async (
 
 // ========== 알림 설정 ==========
 
-export type NotificationSetting = {
-  type: NotificationType;
-  enabled: boolean;
-};
-
-export type NotificationSettingsResult = {
-  settings: NotificationSetting[];
+// 백엔드 설정 객체 — 전체 설정을 한 번에 받고 보냄.
+export type NotificationSettings = {
+  commentNotificationEnabled: boolean;
+  replyNotificationEnabled: boolean;
 };
 
 /**
  * 알림 설정 조회
- * GET /api/v1/notification-settings
+ * GET /api/v1/notifications/settings
  */
 export const getNotificationSettings = async (): Promise<
-  ApiResponse<NotificationSettingsResult>
+  ApiResponse<NotificationSettings>
 > => {
-  const response = await client.get<ApiResponse<NotificationSettingsResult>>(
-    '/api/v1/notification-settings'
+  const response = await client.get<ApiResponse<NotificationSettings>>(
+    '/api/v1/notifications/settings'
   );
   return response.data;
 };
 
 /**
  * 알림 설정 변경
- * PATCH /api/v1/notification-settings
+ * PATCH /api/v1/notifications/settings
+ * body 는 전체 설정 객체 — 한 토글만 바꿀 때도 나머지 필드 같이 보내야 함.
  */
-export const updateNotificationSetting = async (
-  request: NotificationSetting
-): Promise<ApiResponse<NotificationSetting>> => {
-  const response = await client.patch<ApiResponse<NotificationSetting>>(
-    '/api/v1/notification-settings',
+export const updateNotificationSettings = async (
+  request: NotificationSettings
+): Promise<ApiResponse<NotificationSettings>> => {
+  const response = await client.patch<ApiResponse<NotificationSettings>>(
+    '/api/v1/notifications/settings',
     request
   );
   return response.data;
