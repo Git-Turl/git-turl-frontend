@@ -87,19 +87,38 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
     setIsLoading(true);
     setLoadError(null);
 
-    // 백엔드 페이지네이션이 0-indexed (Spring 관례) — 첫 페이지는 0.
-    getNotifications({ page: 0, size: PAGE_SIZE })
-      .then((res) => {
+    // 백엔드가 기본적으로 안 읽음만 반환하는 듯해서, 읽음/안 읽음 따로 호출 후 머지.
+    // page 0-indexed (Spring 관례). 둘 다 첫 페이지만 가져옴 — 추후 페이지네이션 필요 시 분리.
+    Promise.all([
+      getNotifications({ page: 0, size: PAGE_SIZE, isRead: false }),
+      getNotifications({ page: 0, size: PAGE_SIZE, isRead: true }),
+    ])
+      .then(([unreadRes, readRes]) => {
         if (cancelled) return;
-        console.log('[notifications] list response', res);
-        // isSuccess === false 인 경우만 에러로 취급.
-        // result 가 null 이거나 notifications 가 비어있어도 정상 (알림 0건).
-        if (res.isSuccess === false) {
-          setLoadError(res.message || '알림을 불러오지 못했어요.');
+        if (unreadRes.isSuccess === false && readRes.isSuccess === false) {
+          setLoadError(
+            unreadRes.message || readRes.message || '알림을 불러오지 못했어요.'
+          );
           return;
         }
-        const list = res.result?.notifications ?? [];
-        setNotifications(list.map(mapItemToNotification));
+        const unread = unreadRes.result?.notifications ?? [];
+        const read = readRes.result?.notifications ?? [];
+        // 안 읽음 먼저, 읽음 뒤로. 각 그룹 내에서는 id 내림차순(최신).
+        const merged = [...unread, ...read]
+          .map(mapItemToNotification)
+          .sort((a, b) => {
+            if (a.read !== b.read) return a.read ? 1 : -1;
+            return b.id - a.id;
+          });
+        // 같은 id 중복 제거 (양쪽 모두에 잘못 포함되는 경우 방어)
+        const deduped: typeof merged = [];
+        const seen = new Set<number>();
+        for (const n of merged) {
+          if (seen.has(n.id)) continue;
+          seen.add(n.id);
+          deduped.push(n);
+        }
+        setNotifications(deduped);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -329,7 +348,8 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
                 style={{
                   width: '100%',
                   textAlign: 'left',
-                  background: n.read ? 'white' : '#F0F9FF',
+                  // 안 읽음 → 흰색 (강조), 읽음 → 연한 회색.
+                  background: n.read ? '#F3F4F6' : 'white',
                   border: 'none',
                   borderBottom: '1px solid #F3F4F6',
                   padding: '14px 20px',
@@ -337,14 +357,15 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
                   gap: 12,
                   cursor: 'pointer',
                   transition: 'background 0.15s',
+                  opacity: n.read ? 0.85 : 1,
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = '#E0F2FE';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = n.read
-                    ? 'white'
-                    : '#F0F9FF';
+                    ? '#F3F4F6'
+                    : 'white';
                 }}
               >
                 {/* 아바타 */}
