@@ -26,6 +26,7 @@ import {
 } from '../../api/community';
 import { getRecruitStatus } from '../../utils/localBoardStatus';
 import { AuthorLink } from '../../components/common/AuthorLink';
+import defaultProfile from '../../assets/img/img_profile.svg';
 import '../../components/RichTextEditor/editor.css';
 
 const boardTypeLabel: Record<BoardType, string> = {
@@ -33,6 +34,29 @@ const boardTypeLabel: Record<BoardType, string> = {
   PROJECT: '프로젝트',
   FORUM: '자유게시판',
 };
+
+// 작성자 아바타 — 프로필 이미지 URL 있으면 img, 없으면 기본 이미지.
+// '' 빈 문자열 도 "이미지 없음" 으로 간주.
+function Avatar({ src, size = 28 }: { src?: string; size?: number }) {
+  const url = src && src.length > 0 ? src : defaultProfile;
+  return (
+    <img
+      src={url}
+      alt=""
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        objectFit: 'cover',
+        background: '#E5E7EB',
+        flexShrink: 0,
+      }}
+      onError={(e) => {
+        e.currentTarget.src = defaultProfile;
+      }}
+    />
+  );
+}
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -518,15 +542,7 @@ export function CommunityDetail() {
             writerId={post.authorId}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
           >
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                background: '#E5E7EB',
-                flexShrink: 0,
-              }}
-            />
+            <Avatar src={post.profileImage ?? undefined} size={28} />
             <span style={{ fontSize: 13, color: '#4A5565' }}>
               {post.authorName}
             </span>
@@ -823,16 +839,9 @@ function CommentRow({
           writerId={comment.writerId}
           style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}
         >
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              background: '#E5E7EB',
-              flexShrink: 0,
-              marginTop: 2,
-            }}
-          />
+          <div style={{ marginTop: 2 }}>
+            <Avatar src={comment.profileImage ?? undefined} size={28} />
+          </div>
         </AuthorLink>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, color: '#4A5565', marginBottom: 4 }}>

@@ -53,6 +53,8 @@ export type BoardDetail = {
   authorName: string;
   // 백엔드가 작성자 id 필드 추가 시 자동 채워짐.
   authorId?: number;
+  // 백엔드 응답에 인라인으로 옴 (S3 URL).
+  profileImage?: string | null;
   views: number;
   likeCount: number;
   isLiked: boolean;
@@ -120,6 +122,8 @@ export type Comment = {
   writerName: string;
   // 백엔드가 작성자 id 필드 추가 시 자동 채워짐.
   writerId?: number;
+  // 백엔드 응답에 인라인으로 옴 (S3 URL).
+  profileImage?: string | null;
   likeCount: number;
   isLiked: boolean;
   createdAt: string;
