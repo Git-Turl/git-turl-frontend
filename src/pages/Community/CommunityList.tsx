@@ -97,91 +97,6 @@ function isNewPost(iso: string): boolean {
   return Date.now() - d < 24 * 60 * 60 * 1000;
 }
 
-// ⚠️ 시연용 목업 — 백엔드 응답에 작성자 id 추가되면 제거.
-// 작성자는 jeongkyueun / siuoo0819 고정 (타인 프로필 클릭 → /profile/:nickname 흐름 검증).
-// boardId 는 백엔드 PK 와 충돌 안 나게 큰 음수 사용. 게시글 자체를 클릭하면
-// 상세 페이지가 404 일 수 있으니 시연에서는 작성자 이름만 클릭.
-const hoursAgo = (h: number) =>
-  new Date(Date.now() - h * 60 * 60 * 1000).toISOString();
-
-// 탭별 2개씩 — 같은 작성자 2명(jeongkyueun, siuoo0819)을 그대로 쓰면서 제목/내용만 탭에 맞춤.
-const MOCK_POSTS_BY_TAB: Record<TabType, Omit<BoardListItem, 'boardType'>[]> = {
-  study: [
-    {
-      boardId: -10001,
-      title: '토익 900점대 같이 공부하실 분 구합니다',
-      content:
-        '<p>안녕하세요! 토익 900점 목표로 함께 공부하실 분 구합니다. 매주 정기 모임에서 RC/LC 같이 풀고 점수 인증으로 동기부여 받아봐요. 평일 저녁 2시간 정도 생각하고 있습니다.</p>',
-      imageUrl: null,
-      studyTag: 'LANGUAGE',
-      writerName: 'jeongkyueun',
-      likeCount: 5,
-      createdAt: hoursAgo(2),
-    },
-    {
-      boardId: -10002,
-      title: '정보처리기사 필기 스터디 모집합니다',
-      content:
-        '<p>정보처리기사 필기 시험 같이 준비하실 분 모집합니다. 1과목부터 차근차근 같이 정리하고 기출문제 풀이 진행할 예정입니다. 자격증 도전 환영이에요!</p>',
-      imageUrl: null,
-      studyTag: 'CERTIFICATE',
-      writerName: 'siuoo0819',
-      likeCount: 8,
-      createdAt: hoursAgo(6),
-    },
-  ],
-  project: [
-    {
-      boardId: -10003,
-      title: '백엔드 (DB쪽) 구합니다',
-      content:
-        '<p>사이드 프로젝트 백엔드 (DB 설계 + API) 담당해주실 분 구합니다. 스택은 Spring Boot + PostgreSQL 예정이고, 주 1회 온라인 미팅 진행할 예정입니다. 포트폴리오용으로도 좋아요!</p>',
-      imageUrl: null,
-      projectStatus: 'RECRUITING',
-      techFields: ['BACKEND'],
-      platformTypes: ['WEB'],
-      writerName: 'jeongkyueun',
-      likeCount: 6,
-      createdAt: hoursAgo(3),
-    },
-    {
-      boardId: -10004,
-      title: '디자이너 구합니다 ~블렌더 환영~',
-      content:
-        '<p>팀 프로젝트 UI/UX 디자이너 구합니다. 블렌더로 간단한 3D 에셋 만들 수 있는 분 대환영! 정해진 마감 없고 천천히 진행할 예정입니다. 포트폴리오 만들고 싶으신 분 모십니다.</p>',
-      imageUrl: null,
-      projectStatus: 'RECRUITING',
-      techFields: ['ETC'],
-      platformTypes: ['WEB', 'APP'],
-      writerName: 'siuoo0819',
-      likeCount: 12,
-      createdAt: hoursAgo(8),
-    },
-  ],
-  free: [
-    {
-      boardId: -10005,
-      title: '컴퓨터 앞에만 앉아서 체력부족을 근래 느끼는데 다들 운동 하시나요',
-      content:
-        '<p>하루 종일 코딩만 하다 보니 요즘 체력이 너무 떨어진 것 같아요. 다들 어떻게 운동하시나요? 추천하는 루틴이나 운동 있으면 공유 부탁드립니다. 홈트도 좋고 헬스도 좋아요!</p>',
-      imageUrl: null,
-      writerName: 'jeongkyueun',
-      likeCount: 18,
-      createdAt: hoursAgo(1),
-    },
-    {
-      boardId: -10006,
-      title: '퇴근하고 싶다...',
-      content:
-        '<p>오늘따라 퇴근 시간이 왜 이렇게 안 가는지... 다들 화이팅하세요 ㅠㅠ 금요일까지만 버티면 됩니다.</p>',
-      imageUrl: null,
-      writerName: 'siuoo0819',
-      likeCount: 32,
-      createdAt: hoursAgo(0.5),
-    },
-  ],
-};
-
 // HTML 태그 제거 후 텍스트 미리보기용으로 변환
 function stripHtml(html: string): string {
   return html
@@ -235,31 +150,19 @@ export function CommunityList() {
     })
       .then((res) => {
         if (cancelled) return;
-        // 활성 탭의 목업 게시글 2개를 첫 페이지 상단에 prepend.
-        const currentType = tabToBoardType[activeTab];
-        const mocks: BoardListItem[] = MOCK_POSTS_BY_TAB[activeTab].map((m) => ({
-          ...m,
-          boardType: currentType,
-        }));
         if (res.isSuccess && res.result) {
-          const real = res.result.boardList ?? [];
-          setPosts(page === 1 ? [...mocks, ...real] : real);
+          setPosts(res.result.boardList ?? []);
           setTotalPages(Math.max(1, res.result.totalPage ?? 1));
         } else {
           setError(res.message || '게시글을 불러오지 못했습니다.');
-          setPosts(page === 1 ? mocks : []);
+          setPosts([]);
           setTotalPages(1);
         }
       })
       .catch(() => {
         if (cancelled) return;
         setError('게시글을 불러오지 못했습니다.');
-        const currentType = tabToBoardType[activeTab];
-        const mocks: BoardListItem[] = MOCK_POSTS_BY_TAB[activeTab].map((m) => ({
-          ...m,
-          boardType: currentType,
-        }));
-        setPosts(page === 1 ? mocks : []);
+        setPosts([]);
         setTotalPages(1);
       })
       .finally(() => {
@@ -813,7 +716,7 @@ function PostRow({
             <Heart size={14} />
             <span>{post.likeCount}</span>
           </div>
-          <AuthorLink writerName={post.writerName}>
+          <AuthorLink writerId={post.writerId}>
             <div style={{ color: '#828282', fontSize: 13 }}>
               {post.writerName}
             </div>

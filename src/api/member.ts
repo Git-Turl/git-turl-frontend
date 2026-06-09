@@ -269,21 +269,7 @@ export const getMemberProfile = async (
   return response.data;
 };
 
-/**
- * 타인 프로필 조회 (nickname 기반)
- * GET /api/v1/members/by-nickname/{nickname}/profile
- * - 닉네임은 백엔드가 unique 보장.
- * - 응답 스키마는 MyProfile 과 동일.
- * - path 가 백엔드 실제 경로와 다르면 이 한 줄만 수정.
- */
-export const getMemberProfileByNickname = async (
-  nickname: string
-): Promise<ApiResponse<MyProfile>> => {
-  const response = await client.get<ApiResponse<MyProfile>>(
-    `/api/v1/members/by-nickname/${encodeURIComponent(nickname)}/profile`
-  );
-  return response.data;
-};
+// by-nickname 프로필 조회는 백엔드에 없음 — memberId 기반(getMemberProfile) 사용.
 
 // 깃털 히스토리 (서버 필드명 daysWthGitTurl 그대로 사용 — typo 가능성 있음)
 export type GitTurlHistory = {
@@ -299,6 +285,120 @@ export type GitTurlHistory = {
 export const getMyHistory = async (): Promise<ApiResponse<GitTurlHistory>> => {
   const response = await client.get<ApiResponse<GitTurlHistory>>(
     '/api/v1/members/me/history'
+  );
+  return response.data;
+};
+
+// ========== 내 게시글/댓글 조회 ==========
+
+// 백엔드 응답 boardType 이 'FREE' 로 오기도 함 (community 의 BoardType 은 'FORUM').
+// 두 케이스 모두 허용.
+export type MyContentBoardType = 'FORUM' | 'STUDY' | 'PROJECT' | 'FREE';
+
+export type MyBoardSort = 'latest' | 'like';
+
+export type MyBoardItem = {
+  postId: number;
+  title: string;
+  boardType: MyContentBoardType;
+  likeCount: number;
+  commentCount: number;
+  createdAt: string;
+};
+
+export type MyBoardListResult = {
+  posts: MyBoardItem[];
+  page: number;
+  size: number;
+  totalCount: number;
+};
+
+export type MyContentParams = {
+  boardType?: 'FORUM' | 'STUDY' | 'PROJECT';
+  sort?: MyBoardSort;
+  page?: number;
+  size?: number;
+};
+
+const buildMyContentQuery = (params?: MyContentParams) => {
+  const qs = new URLSearchParams();
+  if (params?.boardType) qs.append('boardType', params.boardType);
+  if (params?.sort) qs.append('sort', params.sort);
+  if (params?.page !== undefined) qs.append('page', String(params.page));
+  if (params?.size !== undefined) qs.append('size', String(params.size));
+  const s = qs.toString();
+  return s ? `?${s}` : '';
+};
+
+/**
+ * 내 게시글 조회
+ * GET /api/v1/boards/me
+ */
+export const getMyBoards = async (
+  params?: MyContentParams
+): Promise<ApiResponse<MyBoardListResult>> => {
+  const response = await client.get<ApiResponse<MyBoardListResult>>(
+    `/api/v1/boards/me${buildMyContentQuery(params)}`
+  );
+  return response.data;
+};
+
+export type MyCommentItem = {
+  commentId: number;
+  postId: number;
+  postTitle: string;
+  content: string;
+  boardType: MyContentBoardType;
+  likeCount: number;
+  createdAt: string;
+};
+
+export type MyCommentListResult = {
+  comments: MyCommentItem[];
+  page: number;
+  size: number;
+  totalCount: number;
+};
+
+/**
+ * 내 댓글 조회
+ * GET /api/v1/comments/me
+ */
+export const getMyComments = async (
+  params?: MyContentParams
+): Promise<ApiResponse<MyCommentListResult>> => {
+  const response = await client.get<ApiResponse<MyCommentListResult>>(
+    `/api/v1/comments/me${buildMyContentQuery(params)}`
+  );
+  return response.data;
+};
+
+/**
+ * 타인 게시글 조회
+ * GET /api/v1/boards/members/{memberId}
+ * 응답 스키마는 내 게시글 조회와 동일.
+ */
+export const getMemberBoards = async (
+  memberId: number,
+  params?: MyContentParams
+): Promise<ApiResponse<MyBoardListResult>> => {
+  const response = await client.get<ApiResponse<MyBoardListResult>>(
+    `/api/v1/boards/members/${memberId}${buildMyContentQuery(params)}`
+  );
+  return response.data;
+};
+
+/**
+ * 타인 댓글 조회
+ * GET /api/v1/comments/members/{memberId}
+ * 응답 스키마는 내 댓글 조회와 동일.
+ */
+export const getMemberComments = async (
+  memberId: number,
+  params?: MyContentParams
+): Promise<ApiResponse<MyCommentListResult>> => {
+  const response = await client.get<ApiResponse<MyCommentListResult>>(
+    `/api/v1/comments/members/${memberId}${buildMyContentQuery(params)}`
   );
   return response.data;
 };

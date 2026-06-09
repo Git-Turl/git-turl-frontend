@@ -89,9 +89,9 @@ export const router = createBrowserRouter([
         Component: MyComments,
       },
 
-      // 타인 프로필 (닉네임 기반)
+      // 타인 프로필 (memberId 기반)
       {
-        path: 'profile/:nickname',
+        path: 'profile/:memberId',
         Component: OtherProfile,
       },
 
