@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { FileText, MessageCircle, ChevronRight, Heart } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
@@ -13,8 +13,8 @@ import {
   getMyComments,
   getMyProfile,
   type JobType,
-  type MyBoardItem,
-  type MyCommentItem,
+  type MemberBoardItem,
+  type MemberCommentItem,
   type MyProfile,
 } from '../../api/member';
 import defaultProfile from '../../assets/img/img_profile.svg';
@@ -45,8 +45,8 @@ export function OtherProfile() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [myBoards, setMyBoards] = useState<MyBoardItem[]>([]);
-  const [myComments, setMyComments] = useState<MyCommentItem[]>([]);
+  const [myBoards, setMyBoards] = useState<MemberBoardItem[]>([]);
+  const [myComments, setMyComments] = useState<MemberCommentItem[]>([]);
 
   // URL 의 memberId 와 내 memberId 비교 → 본인 여부 판별.
   const memberIdNum = memberIdParam ? Number(memberIdParam) : NaN;
@@ -71,19 +71,19 @@ export function OtherProfile() {
       // 본인 — /me 엔드포인트 사용
       Promise.all([
         getMyProfile(),
-        getMyBoards({ sort: 'latest', page: 0, size: 5 }),
-        getMyComments({ sort: 'latest', page: 0, size: 5 }),
+        getMyBoards({ sort: 'latest', page: 0, size: 2 }),
+        getMyComments({ sort: 'latest', page: 0, size: 2 }),
       ])
         .then(([profRes, boardsRes, commentsRes]) => {
           if (cancelled) return;
           if (profRes.isSuccess && profRes.result) setProfile(profRes.result);
           else setLoadError(profRes.message || '프로필을 불러오지 못했어요.');
 
-          if (boardsRes.isSuccess && boardsRes.result?.posts) {
-            setMyBoards(boardsRes.result.posts);
+          if (boardsRes.isSuccess && boardsRes.result?.boardList) {
+            setMyBoards(boardsRes.result.boardList);
           }
-          if (commentsRes.isSuccess && commentsRes.result?.comments) {
-            setMyComments(commentsRes.result.comments);
+          if (commentsRes.isSuccess && commentsRes.result?.commentList) {
+            setMyComments(commentsRes.result.commentList);
           }
         })
         .catch((err) => {
@@ -103,8 +103,8 @@ export function OtherProfile() {
     // 타인 — memberId 기반 엔드포인트
     Promise.all([
       getMemberProfile(memberIdNum),
-      getMemberBoards(memberIdNum, { sort: 'latest', page: 0, size: 5 }),
-      getMemberComments(memberIdNum, { sort: 'latest', page: 0, size: 5 }),
+      getMemberBoards(memberIdNum, { sort: 'latest', page: 0, size: 2 }),
+      getMemberComments(memberIdNum, { sort: 'latest', page: 0, size: 2 }),
     ])
       .then(([profRes, boardsRes, commentsRes]) => {
         if (cancelled) return;
@@ -113,11 +113,11 @@ export function OtherProfile() {
         } else {
           setLoadError(profRes.message || '프로필을 불러오지 못했어요.');
         }
-        if (boardsRes.isSuccess && boardsRes.result?.posts) {
-          setMyBoards(boardsRes.result.posts);
+        if (boardsRes.isSuccess && boardsRes.result?.boardList) {
+          setMyBoards(boardsRes.result.boardList);
         }
-        if (commentsRes.isSuccess && commentsRes.result?.comments) {
-          setMyComments(commentsRes.result.comments);
+        if (commentsRes.isSuccess && commentsRes.result?.commentList) {
+          setMyComments(commentsRes.result.commentList);
         }
       })
       .catch((err) => {
@@ -195,22 +195,28 @@ export function OtherProfile() {
 
             <Card className="p-4 bg-white shadow-sm border border-sky-100">
               <nav className="space-y-2">
-                <div className="w-full flex items-center gap-3 p-3 rounded-lg text-left">
+                <Link
+                  to={`/profile/${memberIdNum}/posts`}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-sky-50 transition-colors text-left"
+                >
                   <FileText className="w-5 h-5 text-sky-600" />
                   <span className="text-gray-700">
                     {nickname}
                     {particle} 쓴 글{' '}
                     <span className="text-sky-600">({myBoards.length})</span>
                   </span>
-                </div>
-                <div className="w-full flex items-center gap-3 p-3 rounded-lg text-left">
+                </Link>
+                <Link
+                  to={`/profile/${memberIdNum}/comments`}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-sky-50 transition-colors text-left"
+                >
                   <MessageCircle className="w-5 h-5 text-sky-600" />
                   <span className="text-gray-700">
                     {nickname}
                     {particle} 쓴 댓글{' '}
                     <span className="text-sky-600">({myComments.length})</span>
                   </span>
-                </div>
+                </Link>
               </nav>
             </Card>
           </div>
@@ -233,10 +239,10 @@ export function OtherProfile() {
               {myBoards.length > 0 ? (
                 <ul className="space-y-2">
                   {myBoards.map((b) => (
-                    <li key={b.postId}>
+                    <li key={b.boardId}>
                       <button
                         type="button"
-                        onClick={() => navigate(`/community/${b.postId}`)}
+                        onClick={() => navigate(`/community/${b.boardId}`)}
                         className="w-full flex items-center justify-between p-3 rounded-lg border border-sky-100 hover:bg-sky-50 transition-colors text-left"
                       >
                         <div className="min-w-0 flex-1">
@@ -247,10 +253,6 @@ export function OtherProfile() {
                             <span>{formatDate(b.createdAt)}</span>
                             <span className="flex items-center gap-1">
                               <Heart className="w-3 h-3" /> {b.likeCount}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MessageCircle className="w-3 h-3" />{' '}
-                              {b.commentCount}
                             </span>
                           </div>
                         </div>
@@ -278,11 +280,11 @@ export function OtherProfile() {
                     <li key={c.commentId}>
                       <button
                         type="button"
-                        onClick={() => navigate(`/community/${c.postId}`)}
+                        onClick={() => navigate(`/community/${c.boardId}`)}
                         className="w-full p-3 rounded-lg border border-sky-100 hover:bg-sky-50 transition-colors text-left"
                       >
                         <div className="text-sm text-gray-500 mb-1 truncate">
-                          {c.postTitle}
+                          {c.boardTitle}
                         </div>
                         <div className="text-gray-900 truncate">{c.content}</div>
                         <div className="text-xs text-gray-500 mt-1 flex items-center gap-3">

@@ -13,6 +13,8 @@ import { MyPage } from '../pages/MyPage/MyPage';
 import { MyPosts } from '../pages/MyPage/MyPosts';
 import { MyComments } from '../pages/MyPage/MyComments';
 import { OtherProfile } from '../pages/Profile/OtherProfile';
+import { OtherPosts } from '../pages/Profile/OtherPosts';
+import { OtherComments } from '../pages/Profile/OtherComments';
 
 // 커뮤니티
 import { CommunityList } from '../pages/Community/CommunityList';
@@ -93,6 +95,14 @@ export const router = createBrowserRouter([
       {
         path: 'profile/:memberId',
         Component: OtherProfile,
+      },
+      {
+        path: 'profile/:memberId/posts',
+        Component: OtherPosts,
+      },
+      {
+        path: 'profile/:memberId/comments',
+        Component: OtherComments,
       },
 
       // 커뮤니티
