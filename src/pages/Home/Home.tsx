@@ -21,14 +21,11 @@ import {
   getMyProfile,
   getReportList,
   type GitTurlHistory,
-  type MyBoardItem,
-  type MyCommentItem,
+  type MemberBoardItem,
+  type MemberCommentItem,
   type ReportListItem,
 } from '../../api/member';
-import {
-  getRecommendProjects,
-  getRecommendStudies,
-} from '../../api/home';
+import { getRecommendProjects } from '../../api/home';
 import gitturlLogo from '../../assets/logo/gitturl-logo.svg';
 
 // "2026-04-08T01:40:00" → "4시간 전" 형식 상대시각.
@@ -57,58 +54,89 @@ type StoredUserInfo = {
   avatar?: string;
 };
 
-// 추천 카드용 정규화 타입 — 스터디/프로젝트 어느 쪽에서 왔는지(kind) 까지 보관.
+// 추천 카드용 정규화 타입.
 type RecommendCard = {
-  kind: 'study' | 'project';
   postId: number;
   title: string;
-  category: string;
+  content: string;
+  recruitStacks: string[];
   recruitCount: number;
-  currentCount: number;
+  views: number;
   likeCount: number;
 };
 
-// 카테고리별 아이콘/색 매핑. 백엔드가 소문자 'backend'/'frontend'/'ai' 로 보낼 거라 가정.
-const categoryStyle = (category: string) => {
-  const c = (category || '').toLowerCase();
-  if (c.includes('front'))
-    return { icon: Code, bgColor: '#ECF3FE', iconBg: '#6095FE' };
-  if (c.includes('back'))
-    return { icon: Server, bgColor: '#EFF8EF', iconBg: '#7EC481' };
-  if (c.includes('ai') || c.includes('ml'))
+// 프론트/백/AI 분류 — 스택 이름으로 추정.
+const FRONT_STACKS = new Set([
+  'HTML_CSS',
+  'TAILWIND_CSS',
+  'JAVASCRIPT',
+  'TYPESCRIPT',
+  'REACT',
+  'VUE_JS',
+  'ANGULAR',
+  'NEXT_JS',
+  'SVELTE',
+  'JQUERY',
+  'REACT_NATIVE',
+  'FLUTTER',
+  'SWIFT',
+  'KOTLIN',
+  'XAMARIN',
+]);
+const AI_STACKS = new Set([
+  'TENSORFLOW',
+  'PYTORCH',
+  'SCIKIT_LEARN',
+  'LANGCHAIN',
+  'OPENAI_API',
+  'PANDAS',
+]);
+
+// 스택 배열 기반 아이콘/색 결정.
+const stacksStyle = (stacks: string[]) => {
+  const has = (set: Set<string>) => stacks.some((s) => set.has(s));
+  if (has(AI_STACKS))
     return { icon: Brain, bgColor: '#F4F2FE', iconBg: '#C2B6FC' };
-  return { icon: Code, bgColor: '#F3F4F6', iconBg: '#9CA3AF' };
+  if (has(FRONT_STACKS))
+    return { icon: Code, bgColor: '#ECF3FE', iconBg: '#6095FE' };
+  return { icon: Server, bgColor: '#EFF8EF', iconBg: '#7EC481' };
 };
 
-// 카테고리 한글 라벨 (간단)
-const categoryLabel = (category: string) => {
-  const c = (category || '').toLowerCase();
-  if (c.includes('front')) return '프론트엔드';
-  if (c.includes('back')) return '백엔드';
-  if (c.includes('ai') || c.includes('ml')) return 'AI';
-  return category || '기타';
-};
-
-// kind 한글 라벨
-const kindLabel = (kind: 'study' | 'project') =>
-  kind === 'study' ? '스터디' : '프로젝트';
-
-// 머지된 배열을 셔플 → 앞 N개. Fisher–Yates.
-const pickRandom = <T,>(arr: T[], n: number): T[] => {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a.slice(0, n);
+// 스택 enum → 화면용 라벨 (간단 변환).
+const stackLabel = (s: string): string => {
+  const map: Record<string, string> = {
+    HTML_CSS: 'HTML/CSS',
+    TAILWIND_CSS: 'Tailwind CSS',
+    JAVASCRIPT: 'JavaScript',
+    TYPESCRIPT: 'TypeScript',
+    NEXT_JS: 'Next.js',
+    NODE_JS: 'Node.js',
+    NEST_JS: 'Nest.js',
+    VUE_JS: 'Vue.js',
+    SPRING_BOOT: 'Spring Boot',
+    SCIKIT_LEARN: 'scikit-learn',
+    OPENAI_API: 'OpenAI API',
+    GITHUB_ACTIONS: 'GitHub Actions',
+    RUBY_ON_RAILS: 'Ruby on Rails',
+    ASP_NET: 'ASP.NET',
+    FAST_API: 'FastAPI',
+    RESTFUL_API: 'REST API',
+  };
+  if (map[s]) return map[s];
+  // 기본: 언더스코어 → 공백
+  return s
+    .toLowerCase()
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 };
 
 export function Home() {
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
   const [history, setHistory] = useState<GitTurlHistory | null>(null);
   const [recentReports, setRecentReports] = useState<ReportListItem[]>([]);
-  const [recentBoards, setRecentBoards] = useState<MyBoardItem[]>([]);
-  const [recentComments, setRecentComments] = useState<MyCommentItem[]>([]);
+  const [recentBoards, setRecentBoards] = useState<MemberBoardItem[]>([]);
+  const [recentComments, setRecentComments] = useState<MemberCommentItem[]>([]);
   const [recommendCards, setRecommendCards] = useState<RecommendCard[]>([]);
   const navigate = useNavigate();
 
@@ -132,55 +160,36 @@ export function Home() {
     getMyBoards({ sort: 'latest', page: 0, size: 5 })
       .then((res) => {
         if (cancelled) return;
-        if (res.isSuccess && res.result?.posts) setRecentBoards(res.result.posts);
+        if (res.isSuccess && res.result?.boardList)
+          setRecentBoards(res.result.boardList);
       })
       .catch((err) => console.error('[home] my boards load failed', err));
 
     getMyComments({ sort: 'latest', page: 0, size: 5 })
       .then((res) => {
         if (cancelled) return;
-        if (res.isSuccess && res.result?.comments) {
-          setRecentComments(res.result.comments);
+        if (res.isSuccess && res.result?.commentList) {
+          setRecentComments(res.result.commentList);
         }
       })
       .catch((err) => console.error('[home] my comments load failed', err));
 
-    // 추천 — 스터디 + 프로젝트 둘 다 받아오고, 모집중(자리 남음)만 필터 → 셔플 → 3개.
-    // 응답에 projectStatus 가 없어서 currentCount < recruitCount 로 모집중 판정.
-    Promise.all([
-      getRecommendStudies({ page: 0, size: 20 }),
-      getRecommendProjects({ page: 0, size: 20 }),
-    ])
-      .then(([studyRes, projectRes]) => {
+    // 추천 — 백엔드가 최대 3개 (관심 스택 기반) 내려줌. 프론트에서 추가 필터/셔플 불필요.
+    getRecommendProjects({ page: 0 })
+      .then((res) => {
         if (cancelled) return;
-        const isRecruiting = (item: {
-          recruitCount: number;
-          currentCount: number;
-        }) => item.currentCount < item.recruitCount;
-
-        const studies = (studyRes.result?.studies ?? [])
-          .filter(isRecruiting)
-          .map<RecommendCard>((s) => ({
-            kind: 'study',
-            postId: s.postId,
-            title: s.title,
-            category: s.category,
-            recruitCount: s.recruitCount,
-            currentCount: s.currentCount,
-            likeCount: s.likeCount,
-          }));
-        const projects = (projectRes.result?.projects ?? [])
-          .filter(isRecruiting)
-          .map<RecommendCard>((p) => ({
-            kind: 'project',
-            postId: p.postId,
+        const items = res.result ?? [];
+        setRecommendCards(
+          items.map<RecommendCard>((p) => ({
+            postId: p.boardId,
             title: p.title,
-            category: p.category,
+            content: p.content,
+            recruitStacks: p.recruitStacks ?? [],
             recruitCount: p.recruitCount,
-            currentCount: p.currentCount,
+            views: p.views,
             likeCount: p.likeCount,
-          }));
-        setRecommendCards(pickRandom([...studies, ...projects], 3));
+          }))
+        );
       })
       .catch((err) => console.error('[home] recommend load failed', err));
 
@@ -226,20 +235,21 @@ export function Home() {
 
   const githubUsername = userInfo?.githubId ?? '';
 
-  // 추천 카드 — API 응답 머지 + 랜덤 3개를 표시용 객체로 변환.
+  // 추천 카드 — API 응답을 카드 표시용 객체로 변환.
   const recommendedProjects = recommendCards.map((c) => {
-    const { icon, bgColor, iconBg } = categoryStyle(c.category);
+    const { icon, bgColor, iconBg } = stacksStyle(c.recruitStacks);
     return {
       postId: c.postId,
       icon,
       bgColor,
       iconBg,
       title: c.title,
-      description: `${kindLabel(c.kind)} · ${categoryLabel(c.category)}`,
-      tags: [kindLabel(c.kind), categoryLabel(c.category)],
+      description: (c.content || '').replace(/<[^>]*>/g, ' ').trim() || '프로젝트',
+      // 너무 길어지지 않게 앞 3개만 표시
+      tags: c.recruitStacks.slice(0, 3).map(stackLabel),
       tagBg: bgColor,
       stars: c.likeCount,
-      views: c.currentCount,
+      views: c.views,
       recruits: c.recruitCount,
     };
   });
@@ -300,7 +310,7 @@ export function Home() {
     icon: ThumbsUp,
     iconBg: '#FEF7E6',
     iconColor: '#FECA3F',
-    title: `'${c.postTitle}'에 댓글을 작성했어요`,
+    title: `'${c.boardTitle}'에 댓글을 작성했어요`,
     time: relativeTime(c.createdAt),
     createdAt: c.createdAt,
   }));
@@ -485,7 +495,7 @@ export function Home() {
         </h2>
         <button
           type="button"
-          onClick={() => navigate('/community')}
+          onClick={() => navigate('/community?tab=project')}
           style={{
             display: 'flex',
             alignItems: 'center',
