@@ -86,7 +86,7 @@ export function AppSidebar({
   }, [showInterviewPopup]);
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-sky-200 flex flex-col shadow-sm z-50">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-sky-200 flex flex-col shadow-sm z-50 print:hidden">
       {/* 로고 섹션 */}
       <div className="p-6 border-b border-sky-100">
         <div className="flex items-center gap-3">
