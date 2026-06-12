@@ -1,3 +1,9 @@
 
 @import './styles/tailwind.css';
 @import './styles/theme.css';
+
+@media print {
+  main {
+    margin-left: 0 !important;
+  }
+}

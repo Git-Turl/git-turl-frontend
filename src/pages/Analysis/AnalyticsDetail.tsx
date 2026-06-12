@@ -85,7 +85,7 @@ export function AnalyticsDetail() {
   };
 
   const handleDownloadPDF = () => {
-    alert('PDF 다운로드 기능이 실행됩니다.');
+    window.print();
   };
 
   const handleCreateQuestions = async () => {
@@ -156,7 +156,7 @@ export function AnalyticsDetail() {
     <div className="min-h-screen p-8 bg-[#F0F9FF]">
       <div className="max-w-6xl mx-auto">
         {/* 네비게이션 경로 */}
-        <div className="flex items-center gap-2 mb-8 text-sm">
+        <div className="flex items-center gap-2 mb-8 text-sm print:hidden">
           <Link
             to="/analytics"
             className="text-sky-600 hover:text-sky-700 hover:underline transition-colors"
@@ -222,7 +222,7 @@ export function AnalyticsDetail() {
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-3">
+            <div className="flex flex-col items-end gap-3 print:hidden">
               {/* 공개/비공개 토글 스위치 */}
               <div className="flex items-center gap-3">
                 <button
@@ -255,7 +255,7 @@ export function AnalyticsDetail() {
 
           {/* 분석 내용 */}
           <div className="prose max-w-none mb-8">
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-8 border border-gray-200 min-h-[600px] max-h-[800px] overflow-y-auto shadow-inner">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-8 border border-gray-200 min-h-[600px] max-h-[800px] overflow-y-auto shadow-inner print:max-h-none print:overflow-visible">
               <h2 className="text-xl text-gray-900 mb-4 font-semibold">
                 {analysisData.repoName} 분석 리포트
               </h2>
@@ -410,7 +410,7 @@ export function AnalyticsDetail() {
           </div>
 
           {/* 면접 질문 생성 */}
-          <div className="flex flex-col items-center gap-4 pt-6 border-t border-gray-200">
+          <div className="flex flex-col items-center gap-4 pt-6 border-t border-gray-200 print:hidden">
             {!showQuestionForm ? (
               <button
                 onClick={() => setShowQuestionForm(true)}
