@@ -1,36 +1,41 @@
 import client from './client';
 import type { ApiResponse } from './types';
+import type { BoardStack } from './community';
 
-// 추천 프로젝트 게시글 아이템
-// (백엔드가 로그인 사용자의 관심 스택 + 프로젝트 구인 스택 기준으로 최대 3개 반환)
-export type RecommendProjectItem = {
+// 추천 게시글 아이템 — result 가 객체 wrapper 없이 배열로 바로 옴.
+export type RecommendItem = {
   boardId: number;
   title: string;
   content: string;
-  recruitStacks: string[];
+  recruitStacks: BoardStack[];
   likeCount: number;
   views: number;
   recruitCount: number;
 };
 
-export type RecommendProjectsParams = {
+export type RecommendParams = {
   page?: number;
+  size?: number;
+};
+
+const buildQuery = (params?: RecommendParams) => {
+  const qs = new URLSearchParams();
+  if (params?.page !== undefined) qs.append('page', String(params.page));
+  if (params?.size !== undefined) qs.append('size', String(params.size));
+  const s = qs.toString();
+  return s ? `?${s}` : '';
 };
 
 /**
- * 추천 프로젝트 조회
+ * 프로젝트 추천 조회
  * GET /api/v1/boards/projects/recommend
- * 응답 result 는 배열 (페이지네이션 wrapper 없음).
+ * 응답 result 는 배열 (pagination wrapper 없음).
  */
 export const getRecommendProjects = async (
-  params?: RecommendProjectsParams
-): Promise<ApiResponse<RecommendProjectItem[]>> => {
-  const qs = new URLSearchParams();
-  if (params?.page !== undefined) qs.append('page', String(params.page));
-  const url =
-    qs.toString().length > 0
-      ? `/api/v1/boards/projects/recommend?${qs.toString()}`
-      : '/api/v1/boards/projects/recommend';
-  const response = await client.get<ApiResponse<RecommendProjectItem[]>>(url);
+  params?: RecommendParams
+): Promise<ApiResponse<RecommendItem[]>> => {
+  const response = await client.get<ApiResponse<RecommendItem[]>>(
+    `/api/v1/boards/projects/recommend${buildQuery(params)}`
+  );
   return response.data;
 };
