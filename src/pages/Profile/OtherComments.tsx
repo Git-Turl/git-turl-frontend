@@ -98,12 +98,10 @@ export function OtherComments() {
             {nickname || '프로필'}
           </Link>
           <ChevronRight className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-600">쓴 댓글</span>
+          <span className="text-gray-600">Comments</span>
         </div>
 
-        <h1 className="text-3xl mb-8 text-gray-900">
-          {nickname ? `${nickname}이 쓴 댓글` : '쓴 댓글'}
-        </h1>
+        <h1 className="text-3xl mb-8 text-gray-900">Comments</h1>
 
         {comments.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
