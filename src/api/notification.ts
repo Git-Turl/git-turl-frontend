@@ -21,25 +21,8 @@ export type SseNotification = {
   createdAt: string;
 };
 
-export type NotificationType = 'POST_COMMENT' | 'COMMENT_REPLY';
-
-// GET /api/v1/notifications 의 목록 아이템
-export type NotificationItem = {
-  notificationId: number;
-  type: NotificationType;
-  postId: number;
-  commentId: number;
-  message: string;
-  isRead: boolean;
-  createdAt: string;
-};
-
-export type NotificationListResult = {
-  notifications: NotificationItem[];
-  page: number;
-  size: number;
-  totalCount: number;
-};
+// GET /api/v1/notifications 의 목록 아이템 — SSE 와 동일 형태.
+export type NotificationItem = SseNotification;
 
 export type NotificationListParams = {
   page?: number;
@@ -172,10 +155,11 @@ const handleFrame = (raw: string, handlers: SubscribeHandlers) => {
 /**
  * 알림 목록 조회
  * GET /api/v1/notifications
+ * result 는 배열 직접 (pagination wrapper 없음).
  */
 export const getNotifications = async (
   params?: NotificationListParams
-): Promise<ApiResponse<NotificationListResult>> => {
+): Promise<ApiResponse<NotificationItem[]>> => {
   const queryParams = new URLSearchParams();
   if (params?.page !== undefined) queryParams.append('page', String(params.page));
   if (params?.size !== undefined) queryParams.append('size', String(params.size));
@@ -186,7 +170,7 @@ export const getNotifications = async (
     ? `/api/v1/notifications?${queryParams.toString()}`
     : '/api/v1/notifications';
 
-  const response = await client.get<ApiResponse<NotificationListResult>>(url);
+  const response = await client.get<ApiResponse<NotificationItem[]>>(url);
   return response.data;
 };
 
