@@ -64,8 +64,9 @@ export type ProfileRequest = {
 };
 
 export type MyProfile = {
-  // 백엔드가 응답에 id 를 포함하면 채워짐 (작성자 본인 판별에 사용).
+  // 백엔드가 응답에 id / memberId 중 하나를 포함하면 채워짐 (작성자 본인 판별에 사용).
   id?: number;
+  memberId?: number;
   nickname: string;
   profileImage: string;
   jobType: JobType;
@@ -413,6 +414,50 @@ export const getMemberComments = async (
 ): Promise<ApiResponse<MemberCommentListResult>> => {
   const response = await client.get<ApiResponse<MemberCommentListResult>>(
     `/api/v1/comments/members/${memberId}${buildMyContentQuery(params)}`
+  );
+  return response.data;
+};
+
+// ========== 타인 공개 요약본 조회 ==========
+
+export type MemberReportItem = {
+  reportId: number;
+  repoName: string;
+  reportTitle: string;
+  description: string;
+  createdAt: string; // YYYY-MM-DD
+  questionCount: number;
+};
+
+export type MemberReportListResult = {
+  data: MemberReportItem[];
+  nextCursor: string;
+  hasNext: boolean;
+  pageSize: number;
+};
+
+export type MemberReportParams = {
+  cursor?: string; // 기본 '-1'
+  pageSize?: number; // 기본 10
+};
+
+/**
+ * 타인 공개 요약본 목록 조회
+ * GET /api/v1/reports/members/{memberId}
+ * 공개 설정한 요약본만 응답에 포함됨 (백엔드 필터 처리).
+ * 빈 결과는 result 가 없는 정상 응답(REPORT200_8) 으로 옴.
+ */
+export const getMemberReports = async (
+  memberId: number,
+  params?: MemberReportParams
+): Promise<ApiResponse<MemberReportListResult>> => {
+  const qs = new URLSearchParams();
+  if (params?.cursor !== undefined) qs.append('cursor', params.cursor);
+  if (params?.pageSize !== undefined)
+    qs.append('pageSize', String(params.pageSize));
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+  const response = await client.get<ApiResponse<MemberReportListResult>>(
+    `/api/v1/reports/members/${memberId}${query}`
   );
   return response.data;
 };

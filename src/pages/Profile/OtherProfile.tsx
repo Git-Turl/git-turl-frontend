@@ -9,12 +9,14 @@ import {
   getMemberBoards,
   getMemberComments,
   getMemberProfile,
+  getMemberReports,
   getMyBoards,
   getMyComments,
   getMyProfile,
   type JobType,
   type MemberBoardItem,
   type MemberCommentItem,
+  type MemberReportItem,
   type MyProfile,
 } from '../../api/member';
 import defaultProfile from '../../assets/img/img_profile.svg';
@@ -47,6 +49,7 @@ export function OtherProfile() {
 
   const [myBoards, setMyBoards] = useState<MemberBoardItem[]>([]);
   const [myComments, setMyComments] = useState<MemberCommentItem[]>([]);
+  const [publicReports, setPublicReports] = useState<MemberReportItem[]>([]);
 
   // URL 의 memberId 와 내 memberId 비교 → 본인 여부 판별.
   const memberIdNum = memberIdParam ? Number(memberIdParam) : NaN;
@@ -66,6 +69,7 @@ export function OtherProfile() {
     setLoadError(null);
     setMyBoards([]);
     setMyComments([]);
+    setPublicReports([]);
 
     if (isSelf) {
       // 본인 — /me 엔드포인트 사용
@@ -105,8 +109,10 @@ export function OtherProfile() {
       getMemberProfile(memberIdNum),
       getMemberBoards(memberIdNum, { sort: 'latest', page: 0, size: 2 }),
       getMemberComments(memberIdNum, { sort: 'latest', page: 0, size: 2 }),
+      // 공개 요약본 — 빈 결과는 result 없이 정상 응답(REPORT200_8)이라 catch 없이 처리
+      getMemberReports(memberIdNum, { pageSize: 10 }),
     ])
-      .then(([profRes, boardsRes, commentsRes]) => {
+      .then(([profRes, boardsRes, commentsRes, reportsRes]) => {
         if (cancelled) return;
         if (profRes.isSuccess && profRes.result) {
           setProfile(profRes.result);
@@ -118,6 +124,9 @@ export function OtherProfile() {
         }
         if (commentsRes.isSuccess && commentsRes.result?.commentList) {
           setMyComments(commentsRes.result.commentList);
+        }
+        if (reportsRes.isSuccess && reportsRes.result?.data) {
+          setPublicReports(reportsRes.result.data);
         }
       })
       .catch((err) => {
@@ -201,8 +210,7 @@ export function OtherProfile() {
                 >
                   <FileText className="w-5 h-5 text-sky-600" />
                   <span className="text-gray-700">
-                    {nickname}
-                    {particle} 쓴 글{' '}
+                    Posts{' '}
                     <span className="text-sky-600">({myBoards.length})</span>
                   </span>
                 </Link>
@@ -212,8 +220,7 @@ export function OtherProfile() {
                 >
                   <MessageCircle className="w-5 h-5 text-sky-600" />
                   <span className="text-gray-700">
-                    {nickname}
-                    {particle} 쓴 댓글{' '}
+                    Comments{' '}
                     <span className="text-sky-600">({myComments.length})</span>
                   </span>
                 </Link>
@@ -228,17 +235,27 @@ export function OtherProfile() {
               username={profile.githubId || 'unknown'}
             />
 
-            <SummaryCarousel summaries={[]} />
+            <SummaryCarousel
+              summaries={publicReports.map((r) => ({
+                id: String(r.reportId),
+                title: r.reportTitle || r.repoName,
+                repository: r.repoName,
+                date: formatDate(r.createdAt),
+                description: r.description ?? '',
+                tags:
+                  r.questionCount > 0 ? [`질문 ${r.questionCount}개`] : [],
+              }))}
+            />
 
             {/* 최근 게시글 */}
             <Card className="p-6 bg-white shadow-sm border border-sky-100">
               <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-sky-600" />
-                {isSelf ? '내 최근 게시글' : `${nickname}의 최근 게시글`}
+                Recent Posts
               </h3>
               {myBoards.length > 0 ? (
                 <ul className="space-y-2">
-                  {myBoards.map((b) => (
+                  {myBoards.slice(0, 2).map((b) => (
                     <li key={b.boardId}>
                       <button
                         type="button"
@@ -272,11 +289,11 @@ export function OtherProfile() {
             <Card className="p-6 bg-white shadow-sm border border-sky-100">
               <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-sky-600" />
-                {isSelf ? '내 최근 댓글' : `${nickname}의 최근 댓글`}
+                Recent Comments
               </h3>
               {myComments.length > 0 ? (
                 <ul className="space-y-2">
-                  {myComments.map((c) => (
+                  {myComments.slice(0, 2).map((c) => (
                     <li key={c.commentId}>
                       <button
                         type="button"
