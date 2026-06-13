@@ -9,6 +9,7 @@ import { SignUp } from '../pages/SignUp/SignUp';
 
 // 메인 페이지
 import { Home } from '../pages/Home/Home';
+import { ActivityPage } from '../pages/Activity/ActivityPage';
 import { MyPage } from '../pages/MyPage/MyPage';
 import { MyPosts } from '../pages/MyPage/MyPosts';
 import { MyComments } from '../pages/MyPage/MyComments';
@@ -75,6 +76,12 @@ export const router = createBrowserRouter([
       {
         path: 'home',
         Component: Home,
+      },
+
+      // 최근 활동 모아보기
+      {
+        path: 'activity',
+        Component: ActivityPage,
       },
 
       // 마이페이지
