@@ -10,7 +10,6 @@ import {
   GitBranch,
   MessageSquare,
   Calendar,
-  Bookmark,
   ThumbsUp,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
@@ -21,11 +20,14 @@ import {
   getMyProfile,
   getReportList,
   type GitTurlHistory,
-  type MemberBoardItem,
-  type MemberCommentItem,
+  type MyBoardItem,
+  type MyCommentItem,
   type ReportListItem,
 } from '../../api/member';
-import { getRecommendProjects } from '../../api/home';
+import {
+  getRecommendProjects,
+  type RecommendItem,
+} from '../../api/home';
 import gitturlLogo from '../../assets/logo/gitturl-logo.svg';
 
 // "2026-04-08T01:40:00" → "4시간 전" 형식 상대시각.
@@ -54,45 +56,15 @@ type StoredUserInfo = {
   avatar?: string;
 };
 
-// 추천 카드용 정규화 타입.
-type RecommendCard = {
-  postId: number;
-  title: string;
-  content: string;
-  recruitStacks: string[];
-  recruitCount: number;
-  views: number;
-  likeCount: number;
-};
-
-// 프론트/백/AI 분류 — 스택 이름으로 추정.
-const FRONT_STACKS = new Set([
-  'HTML_CSS',
-  'TAILWIND_CSS',
-  'JAVASCRIPT',
-  'TYPESCRIPT',
-  'REACT',
-  'VUE_JS',
-  'ANGULAR',
-  'NEXT_JS',
-  'SVELTE',
-  'JQUERY',
-  'REACT_NATIVE',
-  'FLUTTER',
-  'SWIFT',
-  'KOTLIN',
-  'XAMARIN',
+// 스택 enum 분류용 (recruitStacks 기반으로 아이콘/색 결정).
+const FRONT_STACKS = new Set<string>([
+  'HTML_CSS', 'TAILWIND_CSS', 'JAVASCRIPT', 'TYPESCRIPT', 'REACT', 'VUE', 'NEXT_JS',
 ]);
-const AI_STACKS = new Set([
-  'TENSORFLOW',
-  'PYTORCH',
-  'SCIKIT_LEARN',
-  'LANGCHAIN',
-  'OPENAI_API',
-  'PANDAS',
+const AI_STACKS = new Set<string>([
+  'TENSORFLOW', 'PYTORCH', 'SCIKIT_LEARN', 'LANGCHAIN', 'OPENAI_API', 'PANDAS',
 ]);
 
-// 스택 배열 기반 아이콘/색 결정.
+// 추천 카드의 recruitStacks 로부터 아이콘/색 결정.
 const stacksStyle = (stacks: string[]) => {
   const has = (set: Set<string>) => stacks.some((s) => set.has(s));
   if (has(AI_STACKS))
@@ -102,42 +74,40 @@ const stacksStyle = (stacks: string[]) => {
   return { icon: Server, bgColor: '#EFF8EF', iconBg: '#7EC481' };
 };
 
-// 스택 enum → 화면용 라벨 (간단 변환).
+// 스택 enum → 표시 라벨 (간단 변환).
 const stackLabel = (s: string): string => {
   const map: Record<string, string> = {
     HTML_CSS: 'HTML/CSS',
     TAILWIND_CSS: 'Tailwind CSS',
     JAVASCRIPT: 'JavaScript',
     TYPESCRIPT: 'TypeScript',
+    REACT: 'React',
+    VUE: 'Vue.js',
     NEXT_JS: 'Next.js',
+    JAVA: 'Java',
+    SPRING: 'Spring',
+    SPRING_BOOT: 'SpringBoot',
     NODE_JS: 'Node.js',
-    NEST_JS: 'Nest.js',
-    VUE_JS: 'Vue.js',
-    SPRING_BOOT: 'Spring Boot',
+    EXPRESS: 'Express',
+    MYSQL: 'MySQL',
+    POSTGRESQL: 'PostgreSQL',
+    TENSORFLOW: 'TensorFlow',
+    PYTORCH: 'PyTorch',
     SCIKIT_LEARN: 'scikit-learn',
+    LANGCHAIN: 'LangChain',
     OPENAI_API: 'OpenAI API',
-    GITHUB_ACTIONS: 'GitHub Actions',
-    RUBY_ON_RAILS: 'Ruby on Rails',
-    ASP_NET: 'ASP.NET',
-    FAST_API: 'FastAPI',
-    RESTFUL_API: 'REST API',
+    PANDAS: 'Pandas',
   };
-  if (map[s]) return map[s];
-  // 기본: 언더스코어 → 공백
-  return s
-    .toLowerCase()
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+  return map[s] ?? s;
 };
 
 export function Home() {
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
   const [history, setHistory] = useState<GitTurlHistory | null>(null);
   const [recentReports, setRecentReports] = useState<ReportListItem[]>([]);
-  const [recentBoards, setRecentBoards] = useState<MemberBoardItem[]>([]);
-  const [recentComments, setRecentComments] = useState<MemberCommentItem[]>([]);
-  const [recommendCards, setRecommendCards] = useState<RecommendCard[]>([]);
+  const [recentBoards, setRecentBoards] = useState<MyBoardItem[]>([]);
+  const [recentComments, setRecentComments] = useState<MyCommentItem[]>([]);
+  const [recommendCards, setRecommendCards] = useState<RecommendItem[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -160,36 +130,25 @@ export function Home() {
     getMyBoards({ sort: 'latest', page: 0, size: 5 })
       .then((res) => {
         if (cancelled) return;
-        if (res.isSuccess && res.result?.boardList)
-          setRecentBoards(res.result.boardList);
+        if (res.isSuccess && res.result?.posts) setRecentBoards(res.result.posts);
       })
       .catch((err) => console.error('[home] my boards load failed', err));
 
     getMyComments({ sort: 'latest', page: 0, size: 5 })
       .then((res) => {
         if (cancelled) return;
-        if (res.isSuccess && res.result?.commentList) {
-          setRecentComments(res.result.commentList);
+        if (res.isSuccess && res.result?.comments) {
+          setRecentComments(res.result.comments);
         }
       })
       .catch((err) => console.error('[home] my comments load failed', err));
 
-    // 추천 — 백엔드가 최대 3개 (관심 스택 기반) 내려줌. 프론트에서 추가 필터/셔플 불필요.
-    getRecommendProjects({ page: 0 })
+    // 프로젝트 추천 — result 가 배열로 바로 옴. 백엔드가 추천 알고리즘으로 정렬해서 주므로 그대로 사용.
+    getRecommendProjects()
       .then((res) => {
         if (cancelled) return;
         const items = res.result ?? [];
-        setRecommendCards(
-          items.map<RecommendCard>((p) => ({
-            postId: p.boardId,
-            title: p.title,
-            content: p.content,
-            recruitStacks: p.recruitStacks ?? [],
-            recruitCount: p.recruitCount,
-            views: p.views,
-            likeCount: p.likeCount,
-          }))
-        );
+        setRecommendCards(items.slice(0, 3));
       })
       .catch((err) => console.error('[home] recommend load failed', err));
 
@@ -235,18 +194,20 @@ export function Home() {
 
   const githubUsername = userInfo?.githubId ?? '';
 
-  // 추천 카드 — API 응답을 카드 표시용 객체로 변환.
+  // 추천 카드 — 백엔드 응답을 카드 표시용으로 변환.
+  // 본문은 HTML 일 수 있어 태그 제거 후 사용.
   const recommendedProjects = recommendCards.map((c) => {
-    const { icon, bgColor, iconBg } = stacksStyle(c.recruitStacks);
+    const stacks = c.recruitStacks ?? [];
+    const { icon, bgColor, iconBg } = stacksStyle(stacks);
+    const plainContent = (c.content || '').replace(/<[^>]*>/g, ' ').trim();
     return {
-      postId: c.postId,
+      postId: c.boardId,
       icon,
       bgColor,
       iconBg,
       title: c.title,
-      description: (c.content || '').replace(/<[^>]*>/g, ' ').trim() || '프로젝트',
-      // 너무 길어지지 않게 앞 3개만 표시
-      tags: c.recruitStacks.slice(0, 3).map(stackLabel),
+      description: plainContent || '프로젝트',
+      tags: stacks.slice(0, 3).map(stackLabel),
       tagBg: bgColor,
       stars: c.likeCount,
       views: c.views,
@@ -310,7 +271,7 @@ export function Home() {
     icon: ThumbsUp,
     iconBg: '#FEF7E6',
     iconColor: '#FECA3F',
-    title: `'${c.boardTitle}'에 댓글을 작성했어요`,
+    title: `'${c.postTitle}'에 댓글을 작성했어요`,
     time: relativeTime(c.createdAt),
     createdAt: c.createdAt,
   }));
@@ -495,7 +456,7 @@ export function Home() {
         </h2>
         <button
           type="button"
-          onClick={() => navigate('/community?tab=project')}
+          onClick={() => navigate('/community')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -557,21 +518,6 @@ export function Home() {
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              <button
-                style={{
-                  position: 'absolute',
-                  top: 12,
-                  right: 12,
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-                aria-label="bookmark"
-              >
-                <Bookmark size={18} color="#9CA3AF" />
-              </button>
-
               <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
                 <div
                   style={{
