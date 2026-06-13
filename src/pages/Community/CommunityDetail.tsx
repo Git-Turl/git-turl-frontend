@@ -25,7 +25,7 @@ import {
   type Comment,
 } from '../../api/community';
 import { getRecruitStatus } from '../../utils/localBoardStatus';
-import { AuthorLink } from '../../components/common/AuthorLink';
+import { AuthorLink, getMyMemberId } from '../../components/common/AuthorLink';
 import defaultProfile from '../../assets/img/img_profile.svg';
 import '../../components/RichTextEditor/editor.css';
 
@@ -487,46 +487,52 @@ export function CommunityDetail() {
               <span style={{ fontSize: 13, color: '#4A5565' }}>{likeCount}</span>
             </button>
 
-            <div ref={menuRef} style={{ position: 'relative' }}>
-              <button
-                onClick={() => setMenuOpen((v) => !v)}
-                aria-label="더보기"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 4,
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
-                <MoreVertical size={22} color="#4A5565" />
-              </button>
-
-              {menuOpen && (
-                <div
+            {(() => {
+              // 본인 ID 못 받아오면 기본 표시. 본인 ID 있을 땐 타인 글에서만 숨김.
+              const myId = getMyMemberId();
+              return myId == null || myId === post.writerId;
+            })() && (
+              <div ref={menuRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-label="더보기"
                   style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 4px)',
-                    right: 0,
-                    background: 'white',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 10,
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
                     padding: 4,
-                    minWidth: 124,
-                    zIndex: 10,
+                    display: 'flex',
+                    alignItems: 'center',
                   }}
                 >
-                  <MenuItem onClick={handleEdit} icon={<Pencil size={14} />}>
-                    수정하기
-                  </MenuItem>
-                  <MenuItem onClick={handleDelete} icon={<Trash2 size={14} />}>
-                    삭제하기
-                  </MenuItem>
-                </div>
-              )}
-            </div>
+                  <MoreVertical size={22} color="#4A5565" />
+                </button>
+
+                {menuOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 4px)',
+                      right: 0,
+                      background: 'white',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: 10,
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                      padding: 4,
+                      minWidth: 124,
+                      zIndex: 10,
+                    }}
+                  >
+                    <MenuItem onClick={handleEdit} icon={<Pencil size={14} />}>
+                      수정하기
+                    </MenuItem>
+                    <MenuItem onClick={handleDelete} icon={<Trash2 size={14} />}>
+                      삭제하기
+                    </MenuItem>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -539,7 +545,7 @@ export function CommunityDetail() {
           }}
         >
           <AuthorLink
-            writerId={post.authorId}
+            writerId={post.writerId}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
           >
             <Avatar src={post.profileImage ?? undefined} size={28} />
@@ -601,16 +607,6 @@ export function CommunityDetail() {
               alignItems: 'flex-start',
             }}
           >
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                background: '#E5E7EB',
-                flexShrink: 0,
-                marginTop: 4,
-              }}
-            />
             <textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
@@ -984,56 +980,61 @@ function CommentRow({
             </div>
           )}
         </div>
-        <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="더보기"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 4,
-            }}
-          >
-            <MoreVertical size={18} color="#9CA3AF" />
-          </button>
-          {menuOpen && (
-            <div
+        {(() => {
+              const myId = getMyMemberId();
+              return myId == null || myId === comment.writerId;
+            })() && (
+          <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="더보기"
               style={{
-                position: 'absolute',
-                top: 'calc(100% + 4px)',
-                right: 0,
-                background: 'white',
-                border: '1px solid #E5E7EB',
-                borderRadius: 10,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
                 padding: 4,
-                minWidth: 124,
-                zIndex: 10,
               }}
             >
-              <MenuItem
-                icon={<Pencil size={14} />}
-                onClick={() => {
-                  setMenuOpen(false);
-                  setEditText(comment.content);
-                  setEditOpen(true);
+              <MoreVertical size={18} color="#9CA3AF" />
+            </button>
+            {menuOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  right: 0,
+                  background: 'white',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: 10,
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                  padding: 4,
+                  minWidth: 124,
+                  zIndex: 10,
                 }}
               >
-                수정하기
-              </MenuItem>
-              <MenuItem
-                icon={<Trash2 size={14} />}
-                onClick={() => {
-                  setMenuOpen(false);
-                  onDelete?.(comment.commentId);
-                }}
-              >
-                삭제하기
-              </MenuItem>
-            </div>
-          )}
-        </div>
+                <MenuItem
+                  icon={<Pencil size={14} />}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setEditText(comment.content);
+                    setEditOpen(true);
+                  }}
+                >
+                  수정하기
+                </MenuItem>
+                <MenuItem
+                  icon={<Trash2 size={14} />}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete?.(comment.commentId);
+                  }}
+                >
+                  삭제하기
+                </MenuItem>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {replyOpen && (
