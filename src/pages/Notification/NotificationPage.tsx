@@ -145,39 +145,20 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
     setIsLoading(true);
     setLoadError(null);
 
-    // 백엔드가 기본적으로 안 읽음만 반환하는 듯해서, 읽음/안 읽음 따로 호출 후 머지.
-    // page 0-indexed (Spring 관례). 둘 다 첫 페이지만 가져옴 — 추후 페이지네이션 필요 시 분리.
-    Promise.all([
-      getNotifications({ page: 0, size: PAGE_SIZE, isRead: false }),
-      getNotifications({ page: 0, size: PAGE_SIZE, isRead: true }),
-    ])
-      .then(([unreadRes, readRes]) => {
+    // 한 번 호출로 읽음+안 읽음 다 받아옴 (응답 item 마다 isRead 가 있음).
+    // 안 읽음 먼저, 읽음 뒤로. 각 그룹 내에서는 id 내림차순(최신).
+    getNotifications({ page: 0, size: PAGE_SIZE })
+      .then((res) => {
         if (cancelled) return;
-        if (unreadRes.isSuccess === false && readRes.isSuccess === false) {
-          setLoadError(
-            unreadRes.message || readRes.message || '알림을 불러오지 못했어요.'
-          );
+        if (res.isSuccess === false) {
+          setLoadError(res.message || '알림을 불러오지 못했어요.');
           return;
         }
-        // result 가 배열 직접 (pagination wrapper 없음)
-        const unread = unreadRes.result ?? [];
-        const read = readRes.result ?? [];
-        // 안 읽음 먼저, 읽음 뒤로. 각 그룹 내에서는 id 내림차순(최신).
-        const merged = [...unread, ...read]
-          .map(mapItemToNotification)
-          .sort((a, b) => {
-            if (a.read !== b.read) return a.read ? 1 : -1;
-            return b.id - a.id;
-          });
-        // 같은 id 중복 제거 (양쪽 모두에 잘못 포함되는 경우 방어)
-        const deduped: typeof merged = [];
-        const seen = new Set<number>();
-        for (const n of merged) {
-          if (seen.has(n.id)) continue;
-          seen.add(n.id);
-          deduped.push(n);
-        }
-        setNotifications(deduped);
+        const list = (res.result ?? []).map(mapItemToNotification).sort((a, b) => {
+          if (a.read !== b.read) return a.read ? 1 : -1;
+          return b.id - a.id;
+        });
+        setNotifications(list);
       })
       .catch((err) => {
         if (cancelled) return;
