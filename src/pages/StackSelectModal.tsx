@@ -9,7 +9,6 @@ type Props = {
 
 type StackState = {
   selected: boolean;
-  liked: boolean;
 };
 
 const stackData = {
@@ -78,43 +77,22 @@ export function StackSelectModal({ isOpen, onClose, onSave }: Props) {
   const categories = stackData[activeTab];
 
   const getState = (stack: string): StackState => {
-    return stackStates[stack] || { selected: false, liked: false };
+    return stackStates[stack] || { selected: false };
   };
 
-  const handleNameClick = (stack: string) => {
+  // 행 전체 또는 체크박스 어디를 눌러도 선택 상태 토글.
+  const toggleStack = (stack: string) => {
     const current = getState(stack);
-    const newState: StackState = current.selected
-      ? { selected: false, liked: false }
-      : { selected: true, liked: true };
-
     setStackStates({
       ...stackStates,
-      [stack]: newState,
-    });
-  };
-
-  const handleCheckboxClick = (stack: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const current = getState(stack);
-    const newLiked = !current.liked;
-    const newState: StackState = {
-      liked: newLiked,
-      selected: newLiked ? current.selected : false,
-    };
-
-    setStackStates({
-      ...stackStates,
-      [stack]: newState,
+      [stack]: { selected: !current.selected },
     });
   };
 
   const handleSave = () => {
-    // selected=true이거나 liked=true인 스택 모두 포함
     const allSelected = Object.entries(stackStates)
-      .filter(([_, state]) => state.selected || state.liked)
+      .filter(([_, state]) => state.selected)
       .map(([name]) => name);
-
-    console.log('선택된 기술:', allSelected);
 
     // 부모에게 전달
     onSave(allSelected);
@@ -265,7 +243,7 @@ export function StackSelectModal({ isOpen, onClose, onSave }: Props) {
                     return (
                       <div
                         key={stack}
-                        onClick={() => handleNameClick(stack)}
+                        onClick={() => toggleStack(stack)}
                         style={{
                           width: '100%',
                           height: 50,
@@ -284,23 +262,21 @@ export function StackSelectModal({ isOpen, onClose, onSave }: Props) {
                         }}
                       >
                         <div
-                          onClick={(e) => handleCheckboxClick(stack, e)}
                           style={{
                             width: 24,
                             height: 24,
-                            border: state.liked
+                            border: state.selected
                               ? '2px solid #00AEEF'
                               : '2px solid #828282',
-                            background: state.liked ? '#00AEEF' : 'white',
+                            background: state.selected ? '#00AEEF' : 'white',
                             borderRadius: 4,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             flexShrink: 0,
-                            cursor: 'pointer',
                           }}
                         >
-                          {state.liked && (
+                          {state.selected && (
                             <Check color="white" size={16} strokeWidth={3} />
                           )}
                         </div>
@@ -326,39 +302,13 @@ export function StackSelectModal({ isOpen, onClose, onSave }: Props) {
         <div
           style={{
             display: 'flex',
-            justifyContent: 'space-between',
+            justifyContent: 'flex-end',
             alignItems: 'center',
             paddingTop: 20,
             borderTop: '1px solid #F0F0F0',
             marginTop: 20,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div
-              style={{
-                width: 18,
-                height: 18,
-                border: '2px solid #F50000',
-                borderRadius: 4,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Check color="#F50000" size={12} strokeWidth={3} />
-            </div>
-            <span
-              style={{
-                color: '#F50000',
-                fontSize: 18,
-                fontFamily: 'Inter',
-                fontWeight: 400,
-              }}
-            >
-              선호스택은 체크박스만 선택해주세요
-            </span>
-          </div>
-
           <button
             onClick={handleSave}
             style={{
