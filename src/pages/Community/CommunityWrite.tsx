@@ -5,11 +5,12 @@ import {
   createBoard,
   updateBoard,
   getBoardDetail,
+  labelsToBoardStacks,
   type BoardType,
   type StudyTag as ApiStudyTag,
-  type TechField,
   type ProjectStatus,
   type PlatformType,
+  type CertificateType as ApiCertificateType,
 } from '../../api/community';
 import { setRecruitStatus } from '../../utils/localBoardStatus';
 import { RichTextEditor } from '../../components/RichTextEditor/RichTextEditor';
@@ -18,6 +19,7 @@ type PostType = 'study' | 'project' | 'free';
 type StudyTag = '어학' | '자격증' | '코딩테스트';
 type CertificateType = '필기' | '실기';
 type StackSection = '프론트' | '백엔드' | 'AI';
+type PlatformLabel = '웹' | '앱' | '기타';
 
 type PostSettings = {
   recruitCount?: string;
@@ -26,6 +28,14 @@ type PostSettings = {
   certificateTypes?: string[];
   recruitStacks?: string[];
   usingStacks?: string[];
+  platformTypes?: PlatformLabel[];
+};
+
+// UI 플랫폼 라벨 → 백엔드 enum
+const platformLabelToApi: Record<PlatformLabel, PlatformType> = {
+  웹: 'WEB',
+  앱: 'APP',
+  기타: 'ETC',
 };
 
 const postTypeLabels: Record<PostType, string> = {
@@ -40,6 +50,7 @@ const postTypeToBoardType: Record<PostType, BoardType> = {
   free: 'FORUM',
 };
 
+// 백엔드 BoardStack enum 에 있는 것만 노출 (community.ts 의 BOARD_STACK_BY_LABEL 과 라벨 동일해야 매핑됨)
 const stackData: Record<StackSection, string[]> = {
   프론트: [
     'HTML/CSS',
@@ -51,13 +62,13 @@ const stackData: Record<StackSection, string[]> = {
     'Next.js',
   ],
   백엔드: [
-    'Node.js',
-    'Nest.js',
+    'Java',
+    'Spring',
     'SpringBoot',
-    'Django',
-    'FastAPI',
+    'Node.js',
+    'Express',
     'MySQL',
-    'MongoDB',
+    'PostgreSQL',
   ],
   AI: [
     'TensorFlow',
@@ -90,28 +101,11 @@ const boardTypeToPostType: Record<BoardType, PostType> = {
   FORUM: 'free',
 };
 
-const stackSectionToTechField: Record<StackSection, TechField> = {
-  프론트: 'FRONTED', // ⚠️ 백엔드 enum 오타 그대로
-  백엔드: 'BACKEND',
-  AI: 'AI',
+// UI 자격증 라벨 → 백엔드 enum
+const certificateTypeToApi: Record<CertificateType, ApiCertificateType> = {
+  필기: 'WRITTEN',
+  실기: 'PRACTICAL',
 };
-
-// 선택된 스택 배열을 분야(BACKEND/FRONTED/AI/ETC) 집합으로 변환
-function deriveTechFields(stacks: string[] | undefined): TechField[] {
-  if (!stacks || stacks.length === 0) return [];
-  const fields = new Set<TechField>();
-  for (const stack of stacks) {
-    let matched = false;
-    (Object.keys(stackData) as StackSection[]).forEach((section) => {
-      if (stackData[section].includes(stack)) {
-        fields.add(stackSectionToTechField[section]);
-        matched = true;
-      }
-    });
-    if (!matched) fields.add('ETC');
-  }
-  return Array.from(fields);
-}
 
 export function CommunityWrite() {
   const navigate = useNavigate();
@@ -208,22 +202,28 @@ export function CommunityWrite() {
 
     setSubmitting(true);
     try {
-      // 백엔드 요구 필드:
-      //   title, content, boardType (필수)
-      //   studyTag (nullable), projectStatus (OPEN/CLOSED), techFields[], platformTypes[]
-      //
-      // 사용자 입력 매핑은 최소만 구현하고 나머지는 안전한 기본값으로 보냄:
-      //   - projectStatus: 모집 토글에서 가져옴 (PROJECT 타입일 때만 의미 있음)
-      //   - studyTag / techFields / platformTypes: UI 매핑 미구현 → null / [] 전송
-      //   - 모집 인원, 스택 등 settings 모달 값은 백엔드 전송에 포함하지 않음
       // ===== settings 모달 입력 → 백엔드 필드 매핑 =====
+      // 백엔드 POST /boards 스키마:
+      //   필수: title, content, boardType
+      //   STUDY: studyTag, (자격증이면) certificateType, recruitCount, recruitDeadline, projectStatus
+      //   PROJECT: recruitStacks[], projectStacks[], platformTypes[], recruitCount, recruitDeadline, projectStatus
+      //   FORUM: 위 옵션 필드들 모두 생략/null
       const boardType = postTypeToBoardType[postType];
 
-      // studyTag: STUDY 타입에서만 의미 있음. studyTags 배열의 첫 값을 enum 변환
+      // studyTag: STUDY 타입에서만 의미 있음.
       const firstStudyTag = settings.studyTags?.[0] as StudyTag | undefined;
       const studyTag =
         boardType === 'STUDY' && firstStudyTag
           ? studyTagToApi[firstStudyTag]
+          : null;
+
+      // certificateType: STUDY + 자격증 태그에서만 의미 있음.
+      const firstCert = settings.certificateTypes?.[0] as
+        | CertificateType
+        | undefined;
+      const certificateType =
+        boardType === 'STUDY' && firstStudyTag === '자격증' && firstCert
+          ? certificateTypeToApi[firstCert]
           : null;
 
       // projectStatus: STUDY/PROJECT 에서 모집 토글로부터 도출. FORUM은 null
@@ -234,20 +234,45 @@ export function CommunityWrite() {
             : 'CLOSED'
           : null;
 
-      // techFields: PROJECT에서만 — 구인 스택 배열을 분야(BACKEND/FRONTED/AI/ETC) 집합으로 변환
-      const techFields =
-        boardType === 'PROJECT' ? deriveTechFields(settings.recruitStacks) : [];
+      // recruitCount: 빈 문자열 → null, 그 외 정수로
+      const parsedCount = settings.recruitCount?.trim()
+        ? Number(settings.recruitCount)
+        : null;
+      const recruitCount =
+        boardType !== 'FORUM' && parsedCount !== null && !isNaN(parsedCount)
+          ? parsedCount
+          : null;
 
-      // platformTypes: 현재 UI에 입력이 없어 빈 배열로 전송
-      const platformTypes: PlatformType[] = [];
+      const recruitDeadline =
+        boardType !== 'FORUM' && settings.deadline ? settings.deadline : null;
+
+      // PROJECT 스택: 구인/사용 둘 다 UI 라벨 → BoardStack enum 변환
+      const recruitStacks =
+        boardType === 'PROJECT'
+          ? labelsToBoardStacks(settings.recruitStacks)
+          : [];
+      const projectStacks =
+        boardType === 'PROJECT'
+          ? labelsToBoardStacks(settings.usingStacks)
+          : [];
+
+      // platformTypes: PROJECT 에서 사용자가 고른 라벨 → enum 변환
+      const platformTypes: PlatformType[] =
+        boardType === 'PROJECT'
+          ? (settings.platformTypes ?? []).map((p) => platformLabelToApi[p])
+          : [];
 
       const payload = {
         title: title.trim(),
         content,
         boardType,
         studyTag,
+        certificateType,
         projectStatus,
-        techFields,
+        recruitCount,
+        recruitDeadline,
+        recruitStacks,
+        projectStacks,
         platformTypes,
       };
 
@@ -638,6 +663,9 @@ function PostSettingModal({
   const [usingStacks, setUsingStacks] = useState<string[]>(
     initial?.usingStacks ?? []
   );
+  const [platformTypes, setPlatformTypes] = useState<PlatformLabel[]>(
+    initial?.platformTypes ?? []
+  );
 
   if (!isOpen) return null;
 
@@ -649,6 +677,7 @@ function PostSettingModal({
       certificateTypes,
       recruitStacks,
       usingStacks,
+      platformTypes,
     });
   };
 
@@ -859,6 +888,20 @@ function PostSettingModal({
                   />
                 ))}
               </div>
+            </div>
+
+            <SectionTitle>플랫폼</SectionTitle>
+            <div style={checkboxGridStyle}>
+              {(['웹', '앱', '기타'] as PlatformLabel[]).map((p) => (
+                <CheckBoxButton
+                  key={`platform-${p}`}
+                  label={p}
+                  checked={platformTypes.includes(p)}
+                  onClick={() =>
+                    toggleArrayValue(p, platformTypes, setPlatformTypes)
+                  }
+                />
+              ))}
             </div>
           </>
         )}
