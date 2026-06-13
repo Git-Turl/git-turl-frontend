@@ -89,29 +89,27 @@ export function RichTextEditor({
   };
 
   const insertImage = () => {
-    // PC에서 이미지 파일 선택 → base64로 본문에 삽입
+    // PC에서 이미지 파일 선택 → 캔버스 리사이즈/JPEG 압축 후 base64로 본문에 삽입.
+    // 본문에 인라인되기 때문에 원본을 그대로 박으면 게시글 JSON 페이로드가 폭발함.
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = () => {
+    input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
-      // 5MB 이상 거부 (base64로 직렬화되면 ~33% 더 커져서 전송 부담)
-      const MAX_BYTES = 5 * 1024 * 1024;
+      // 원본 10MB 까지 허용 (압축 후 보통 수백 KB).
+      const MAX_BYTES = 10 * 1024 * 1024;
       if (file.size > MAX_BYTES) {
-        alert('이미지 크기가 너무 큽니다 (최대 5MB).');
+        alert('이미지 크기가 너무 큽니다 (최대 10MB).');
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result;
-        if (typeof dataUrl !== 'string') return;
+      try {
+        const dataUrl = await compressImageToDataUrl(file);
         editor.chain().focus().setImage({ src: dataUrl }).run();
-      };
-      reader.onerror = () => {
-        alert('이미지를 읽지 못했습니다.');
-      };
-      reader.readAsDataURL(file);
+      } catch (e) {
+        console.error('[RichTextEditor] 이미지 처리 실패', e);
+        alert('이미지 처리 중 오류가 발생했습니다.');
+      }
     };
     input.click();
   };
@@ -223,6 +221,44 @@ export function RichTextEditor({
       </div>
     </div>
   );
+}
+
+// 이미지 파일 → 리사이즈 + JPEG 압축된 dataURL 변환.
+// - 최장변 1280px 로 다운스케일 (이미 그보다 작으면 그대로)
+// - JPEG 0.8 품질 — 일반 사진/스크린샷 기준 원본 대비 ~10% 수준까지 줄어듦
+// - 투명 PNG 입력 시 JPEG 변환되면 알파가 사라지므로 흰 배경 채워줌
+async function compressImageToDataUrl(
+  file: File,
+  maxDim = 1280,
+  quality = 0.8
+): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new window.Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('이미지 로드 실패'));
+      el.src = url;
+    });
+    let w = img.naturalWidth;
+    let h = img.naturalHeight;
+    if (Math.max(w, h) > maxDim) {
+      const ratio = maxDim / Math.max(w, h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('canvas 2d context 사용 불가');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', quality);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function ToolBtn({
