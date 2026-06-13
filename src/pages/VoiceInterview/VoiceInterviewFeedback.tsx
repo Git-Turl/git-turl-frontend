@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { Play, Pause, Check, ArrowLeft } from 'lucide-react';
+import { Play, Pause, Check, ArrowLeft, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import {
   getAllVoiceQuestions,
   getVoiceAnswer,
   type VoiceAnswer,
 } from '../../api/voiceInterview';
+import { deleteAnswer, deleteQuestion } from '../../api/member';
 import { getMockQuestions, MOCK_VOICE_ANSWERS } from './mockData';
 import { useVoiceRecordingStore } from '../../store/voiceRecordingStore';
 
@@ -130,6 +131,44 @@ export function VoiceInterviewFeedback() {
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // 현재 표시 중인 질문 자체를 삭제.
+  // 답변이 있으면 답변(+음성 파일)을 먼저 지우고, 그 다음 질문을 지운다.
+  // 답변이 없으면 질문만 바로 삭제.
+  const handleDeleteCurrent = async () => {
+    if (isDeleting) return;
+    const item = feedbackData[selectedQuestion];
+    if (!item) return;
+    setIsDeleting(true);
+    try {
+      const answerId = item.answer?.answerId;
+      if (answerId) {
+        const res = await deleteAnswer(answerId);
+        if (!res.isSuccess) return;
+      }
+      const qRes = await deleteQuestion(item.questionId);
+      if (!qRes.isSuccess) return;
+
+      audioRef.current?.pause();
+      useVoiceRecordingStore.getState().removeRecording(item.questionId);
+
+      setFeedbackData((prev) => {
+        const next = prev.filter((_, idx) => idx !== selectedQuestion);
+        if (next.length === 0) {
+          // 모든 질문이 삭제됨 → 목록으로 복귀
+          navigate('/voice-interview');
+        } else {
+          // 인덱스 보정: 마지막을 지웠으면 한 칸 뒤로
+          setSelectedQuestion((cur) => Math.min(cur, next.length - 1));
+        }
+        return next;
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen p-8 bg-[#F0F9FF]">
@@ -195,7 +234,7 @@ export function VoiceInterviewFeedback() {
                           {item.answer ? (
                             <div className="flex items-center gap-2 mt-2 text-xs text-emerald-300">
                               <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-                              <span>답변 완료</span>
+                              <span>Answered</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
@@ -349,8 +388,8 @@ export function VoiceInterviewFeedback() {
                 </div>
               )}
 
-              {/* 뒤로가기 버튼 */}
-              <div className="flex justify-start pt-8 border-t border-gray-200 mt-8">
+              {/* 뒤로가기 / 답변 삭제 */}
+              <div className="flex items-center justify-between pt-8 border-t border-gray-200 mt-8">
                 <Button
                   onClick={() => navigate('/voice-interview')}
                   variant="outline"
@@ -358,6 +397,15 @@ export function VoiceInterviewFeedback() {
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   목록으로 돌아가기
+                </Button>
+                <Button
+                  onClick={handleDeleteCurrent}
+                  disabled={isDeleting}
+                  variant="outline"
+                  className="px-5 py-2 border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {isDeleting ? '삭제 중...' : '삭제하기'}
                 </Button>
               </div>
             </div>

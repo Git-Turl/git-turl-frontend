@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { Plus, Calendar, Mic } from 'lucide-react';
+import { Plus, Calendar, Mic, Trash2 } from 'lucide-react';
 import { Card } from '../../components/ui/card';
-import { getVoiceReports, type ReportSummary } from '../../api/voiceInterview';
+import {
+  getAllVoiceQuestions,
+  getVoiceAnswer,
+  getVoiceReports,
+  type ReportSummary,
+} from '../../api/voiceInterview';
+import { deleteAnswer, deleteQuestion } from '../../api/member';
 
 type VoiceInterviewItem = {
   id: number;
@@ -30,6 +36,41 @@ export function VoiceInterview() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+
+  // 카드 하나 = report 하나. 답변+질문을 다 지워야 새로고침 후에도 카드가 사라진다.
+  // (report의 questionCount > 0 필터로 노출되기 때문)
+  // 각 질문에 대해: 답변이 있으면 답변(+음성파일) → 질문 순으로 삭제. 답변 없으면 질문만.
+  const handleDeleteInterview = async (reportId: number) => {
+    if (deletingIds.has(reportId)) return;
+    setDeletingIds((prev) => new Set(prev).add(reportId));
+    try {
+      const questions = await getAllVoiceQuestions(reportId);
+      await Promise.all(
+        questions.map(async (q) => {
+          try {
+            const res = await getVoiceAnswer(q.questionId);
+            const answerId = res.result?.answerId;
+            if (answerId) await deleteAnswer(answerId);
+          } catch {
+            // 미답변/패스 질문은 답변 조회 실패 → 무시하고 질문만 지움
+          }
+          try {
+            await deleteQuestion(q.questionId);
+          } catch {
+            // 개별 질문 삭제 실패는 다음 질문 진행에 영향 없도록 통과
+          }
+        })
+      );
+      setVoiceInterviews((prev) => prev.filter((i) => i.id !== reportId));
+    } finally {
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(reportId);
+        return next;
+      });
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -173,7 +214,9 @@ export function VoiceInterview() {
                 {error}
               </div>
             ) : filteredInterviews.length > 0 ? (
-              filteredInterviews.map((interview) => (
+              filteredInterviews.map((interview) => {
+                const isDeleting = deletingIds.has(interview.id);
+                return (
                 <Link
                   key={interview.id}
                   to={`/voice-interview/feedback/${interview.id}`}
@@ -197,15 +240,30 @@ export function VoiceInterview() {
                         음성 질문 {interview.questionCount}개
                       </p>
 
-                      {/* 생성일 */}
-                      <div className="flex items-center gap-2 text-xs text-gray-500 mt-4">
-                        <Calendar className="w-3 h-3" />
-                        <span>{interview.createdAt}</span>
+                      {/* 생성일 + 삭제 */}
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Calendar className="w-3 h-3" />
+                          <span>{interview.createdAt}</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteInterview(interview.id);
+                          }}
+                          disabled={isDeleting}
+                          aria-label="음성 면접 삭제"
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   </Card>
                 </Link>
-              ))
+                );
+              })
             ) : filterMode === 'date' ? (
               <div className="col-span-full text-center py-12 text-gray-500">
                 해당 기간에 생성된 음성 면접 질문이 없습니다.
