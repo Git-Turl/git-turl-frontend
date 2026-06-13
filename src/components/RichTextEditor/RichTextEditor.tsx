@@ -104,7 +104,12 @@ export function RichTextEditor({
         return;
       }
       try {
-        const dataUrl = await compressImageToDataUrl(file);
+        // 작은 이미지는 캔버스 변환 건너뛰고 그대로 인코딩 (메인 스레드 블록 시간 최소화).
+        const SKIP_COMPRESS_BYTES = 300 * 1024;
+        const dataUrl =
+          file.size < SKIP_COMPRESS_BYTES
+            ? await readFileAsDataUrl(file)
+            : await compressImageToDataUrl(file);
         editor.chain().focus().setImage({ src: dataUrl }).run();
       } catch (e) {
         console.error('[RichTextEditor] 이미지 처리 실패', e);
@@ -221,6 +226,19 @@ export function RichTextEditor({
       </div>
     </div>
   );
+}
+
+// 파일을 그대로 base64 dataURL로 읽기 (이미 작아서 압축 불필요한 경우).
+async function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') resolve(reader.result);
+      else reject(new Error('FileReader result is not a string'));
+    };
+    reader.onerror = () => reject(new Error('파일 읽기 실패'));
+    reader.readAsDataURL(file);
+  });
 }
 
 // 이미지 파일 → 리사이즈 + JPEG 압축된 dataURL 변환.

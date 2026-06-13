@@ -277,6 +277,8 @@ export type GitTurlHistory = {
   daysWthGitTurl: number;
   githubReportCount: number;
   interviewQuestionCount: number;
+  // 백엔드가 추가하면 자동 표시 (현재 미지원).
+  weeklyCommitCount?: number;
 };
 
 /**

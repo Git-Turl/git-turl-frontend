@@ -5,7 +5,10 @@ import { Card } from '../../components/ui/card';
 import { getVoiceAnswer, type VoiceAnswer } from '../../api/voiceInterview';
 import { useVoiceRecordingStore } from '../../store/voiceRecordingStore';
 
-const POLL_INTERVAL_MS = 5000; // 5초 간격
+// 폴링 간격 — 초기 5초에서 점진적으로 늘려서 백엔드 부담 감소 (최대 30초).
+const POLL_START_INTERVAL_MS = 5000;
+const POLL_MAX_INTERVAL_MS = 30000;
+const POLL_BACKOFF = 1.5;
 const MAX_POLL_DURATION_MS = 6 * 60 * 1000; // 최대 6분 대기
 
 // 백엔드 분석이 끝났는지 판정.
@@ -47,6 +50,7 @@ export function VoiceInterviewFeedbackLoading() {
     }
 
     const readyIds = new Set<number>();
+    let nextInterval = POLL_START_INTERVAL_MS;
 
     const checkAll = async () => {
       if (cancelledRef.current) return;
@@ -84,7 +88,12 @@ export function VoiceInterviewFeedbackLoading() {
         return;
       }
 
-      setTimeout(checkAll, POLL_INTERVAL_MS);
+      setTimeout(checkAll, nextInterval);
+      // 지수 백오프 — 다음 호출 간격을 점차 늘려서 백엔드 부담 감소
+      nextInterval = Math.min(
+        Math.round(nextInterval * POLL_BACKOFF),
+        POLL_MAX_INTERVAL_MS
+      );
     };
 
     const tickTimer = setInterval(() => {
