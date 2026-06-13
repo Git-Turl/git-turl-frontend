@@ -5,6 +5,7 @@ import {
   Plus,
   ChevronDown,
   Heart,
+  MessageCircle,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -735,6 +736,18 @@ function PostRow({
           >
             <Heart size={14} />
             <span>{post.likeCount}</span>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              color: '#828282',
+              fontSize: 13,
+            }}
+          >
+            <MessageCircle size={14} />
+            <span>{post.commentCount ?? 0}</span>
           </div>
           <AuthorLink writerId={post.writerId}>
             <div style={{ color: '#828282', fontSize: 13 }}>
