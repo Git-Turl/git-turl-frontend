@@ -15,6 +15,8 @@ export type BoardListItem = {
   // 백엔드가 작성자 id 필드 추가 시 자동 채워짐. 없으면 undefined → 프로필 링크 비활성.
   writerId?: number;
   likeCount: number;
+  // 백엔드 응답에 포함되면 표시. 없으면 0 처리.
+  commentCount?: number;
   createdAt: string;
   // 스터디 게시판 한정 — 백엔드가 응답에 포함하면 사용
   studyTag?: StudyTag | null;
@@ -51,35 +53,106 @@ export type BoardDetail = {
   imageUrl: string | null;
   boardType: BoardType;
   authorName: string;
-  // 백엔드가 작성자 id 필드 추가 시 자동 채워짐.
-  authorId?: number;
+  writerId?: number;
   // 백엔드 응답에 인라인으로 옴 (S3 URL).
   profileImage?: string | null;
   views: number;
   likeCount: number;
   isLiked: boolean;
   createdAt: string;
-  // 아래 필드들은 백엔드가 상세 응답에 포함할 때만 채워짐 (수정 시 폼 프리필용)
+  // 게시판별 부가 필드 — STUDY/PROJECT 에서만 채워짐. 수정 폼 프리필용.
+  recruitCount?: number | null;
+  recruitDeadline?: string | null; // YYYY-MM-DD
   studyTag?: StudyTag | null;
+  certificateType?: CertificateType | null;
   projectStatus?: ProjectStatus | null;
-  techFields?: TechField[];
+  recruitStacks?: BoardStack[];
+  projectStacks?: BoardStack[];
   platformTypes?: PlatformType[];
 };
 
 export type StudyTag = 'CERTIFICATE' | 'CODING_TEST' | 'LANGUAGE';
 export type ProjectStatus = 'RECRUITING' | 'CLOSED';
-// ⚠️ 백엔드 enum에 'FRONTED' 오타 그대로 사용
+// ⚠️ 백엔드 enum에 'FRONTED' 오타 그대로 사용. 목록 필터링 쿼리에만 사용.
 export type TechField = 'BACKEND' | 'FRONTED' | 'AI' | 'ETC';
 export type PlatformType = 'WEB' | 'APP' | 'ETC';
 export type BoardSort = 'LATEST' | 'LIKE';
+// 자격증 유형 — 스터디 + 자격증 태그일 때만 의미 있음.
+export type CertificateType = 'WRITTEN' | 'PRACTICAL';
+
+// 게시글 작성/조회용 스택 enum — 백엔드 스펙 기준.
+// member.ts 의 TechStack 과는 별개 (자격증 보드의 enum 풀이 더 좁음).
+export type BoardStack =
+  | 'HTML_CSS'
+  | 'TAILWIND_CSS'
+  | 'JAVASCRIPT'
+  | 'TYPESCRIPT'
+  | 'REACT'
+  | 'VUE' // ⚠️ VUE_JS 아님
+  | 'NEXT_JS'
+  | 'JAVA'
+  | 'SPRING'
+  | 'SPRING_BOOT'
+  | 'NODE_JS'
+  | 'EXPRESS'
+  | 'MYSQL'
+  | 'POSTGRESQL'
+  | 'TENSORFLOW'
+  | 'PYTORCH'
+  | 'SCIKIT_LEARN'
+  | 'LANGCHAIN'
+  | 'OPENAI_API'
+  | 'PANDAS';
+
+// UI 표시명(설정 모달 라벨) → 백엔드 enum
+const BOARD_STACK_BY_LABEL: Record<string, BoardStack> = {
+  'HTML/CSS': 'HTML_CSS',
+  'Tailwind CSS': 'TAILWIND_CSS',
+  JavaScript: 'JAVASCRIPT',
+  TypeScript: 'TYPESCRIPT',
+  React: 'REACT',
+  'Vue.js': 'VUE',
+  'Next.js': 'NEXT_JS',
+  Java: 'JAVA',
+  Spring: 'SPRING',
+  SpringBoot: 'SPRING_BOOT',
+  'Node.js': 'NODE_JS',
+  Express: 'EXPRESS',
+  MySQL: 'MYSQL',
+  PostgreSQL: 'POSTGRESQL',
+  TensorFlow: 'TENSORFLOW',
+  PyTorch: 'PYTORCH',
+  'scikit-learn': 'SCIKIT_LEARN',
+  LangChain: 'LANGCHAIN',
+  'OpenAI API': 'OPENAI_API',
+  Pandas: 'PANDAS',
+};
+
+export const labelsToBoardStacks = (labels: string[] | undefined): BoardStack[] => {
+  if (!labels?.length) return [];
+  const out: BoardStack[] = [];
+  for (const label of labels) {
+    const enumVal = BOARD_STACK_BY_LABEL[label];
+    // 매핑 누락은 조용히 skip (백엔드가 모르는 값 보내면 400)
+    if (enumVal) out.push(enumVal);
+  }
+  return Array.from(new Set(out));
+};
 
 export type BoardCreateRequest = {
   title: string;
   content: string;
   boardType: BoardType;
+  // 스터디 전용
   studyTag?: StudyTag | null;
+  certificateType?: CertificateType | null;
+  // 모집 관련 (STUDY/PROJECT)
   projectStatus?: ProjectStatus | null;
-  techFields?: TechField[];
+  recruitCount?: number | null;
+  recruitDeadline?: string | null; // YYYY-MM-DD
+  // 스택 (BoardStack enum 배열)
+  recruitStacks?: BoardStack[];
+  projectStacks?: BoardStack[];
   platformTypes?: PlatformType[];
 };
 
@@ -167,23 +240,55 @@ export type CommentDeleteResult = {
 // ========== 헬퍼 ==========
 
 /**
- * Spring @RequestPart 호환 multipart FormData 생성.
- * - `request`: JSON Blob — filename을 명시해야 브라우저가 part에 Content-Type: application/json 헤더를 붙임
- * - `image`: 선택 (현재 UI 미사용)
+ * 백엔드가 받는 multipart 형식이 표준 FormData 로는 정확히 표현이 안 됨:
+ * - `request` part: Content-Disposition 에 filename 이 있으면 Spring 이 파일로 인식
+ *   → JSON deserialize 실패 → boardType null → "잘못된 게시판 타입입니다" 로 떨어짐.
+ *   FormData.append(name, Blob) 은 항상 filename="blob" 을 자동으로 붙이기 때문에
+ *   raw multipart body 를 직접 구성해야 함 (Swagger 가 cURL -F 로 보내는 모양 그대로).
+ * - `image` part: 백엔드가 필수로 요구. 이미지 없을 땐 Swagger 처럼 빈 plain text part 로 채움.
  */
-const buildBoardFormData = (
+const MULTIPART_BOUNDARY = 'gitturlBoundary';
+
+const buildBoardMultipart = (
   request: BoardCreateRequest | BoardUpdateRequest,
   image?: File | null
-): FormData => {
-  const formData = new FormData();
-  const jsonBlob = new Blob([JSON.stringify(request)], {
-    type: 'application/json',
-  });
-  formData.append('request', jsonBlob, 'request.json');
+): { body: Blob; contentType: string } => {
+  const CRLF = '\r\n';
+  const parts: BlobPart[] = [];
+
+  // request (JSON body)
+  parts.push(
+    `--${MULTIPART_BOUNDARY}${CRLF}` +
+      `Content-Disposition: form-data; name="request"${CRLF}` +
+      `Content-Type: application/json${CRLF}${CRLF}` +
+      `${JSON.stringify(request)}${CRLF}`
+  );
+
+  // image
   if (image) {
-    formData.append('image', image);
+    const fileName = image instanceof File ? image.name : 'image';
+    parts.push(
+      `--${MULTIPART_BOUNDARY}${CRLF}` +
+        `Content-Disposition: form-data; name="image"; filename="${fileName}"${CRLF}` +
+        `Content-Type: ${image.type || 'application/octet-stream'}${CRLF}${CRLF}`
+    );
+    parts.push(image);
+    parts.push(CRLF);
+  } else {
+    // Swagger 가 보내는 모양과 동일: filename 없이 빈 string
+    parts.push(
+      `--${MULTIPART_BOUNDARY}${CRLF}` +
+        `Content-Disposition: form-data; name="image"${CRLF}${CRLF}` +
+        `${CRLF}`
+    );
   }
-  return formData;
+
+  parts.push(`--${MULTIPART_BOUNDARY}--${CRLF}`);
+
+  return {
+    body: new Blob(parts),
+    contentType: `multipart/form-data; boundary=${MULTIPART_BOUNDARY}`,
+  };
 };
 
 // ========== 게시글 API ==========
@@ -215,27 +320,19 @@ export const getBoardList = async (
 /**
  * 게시글 작성 (multipart/form-data)
  * POST /api/v1/boards
- * - request: JSON Blob (filename 포함)
- * - image: 선택 (현재 UI 미사용)
- *
- * Content-Type 헤더를 명시적으로 삭제(undefined)해서 axios가 FormData를
- * 감지하고 'multipart/form-data; boundary=...' 를 자동으로 붙이게 함.
- * (client.ts의 기본 application/json 가 덮어써지지 않으면 백엔드가 거부함)
+ * - request: JSON part (filename 없이 — Spring이 파일 대신 JSON으로 deserialize 하도록)
+ * - image: 백엔드 필수 part. 없으면 빈 plain text 로 자리채움
  */
 export const createBoard = async (
   request: BoardCreateRequest,
   image?: File | null
 ): Promise<ApiResponse<BoardCreateResult>> => {
-  const formData = buildBoardFormData(request, image);
+  const { body, contentType } = buildBoardMultipart(request, image);
   const response = await client.post<ApiResponse<BoardCreateResult>>(
     '/api/v1/boards',
-    formData,
+    body,
     {
-      headers: {
-        // undefined로 설정하면 axios가 기본 헤더를 제거하고 FormData에 맞게 자동 설정
-        'Content-Type': undefined as unknown as string,
-      },
-      // axios가 FormData를 JSON.stringify 하지 않도록 명시
+      headers: { 'Content-Type': contentType },
       transformRequest: (data) => data,
     }
   );
@@ -264,14 +361,12 @@ export const updateBoard = async (
   request: BoardUpdateRequest,
   image?: File | null
 ): Promise<ApiResponse<BoardUpdateResult>> => {
-  const formData = buildBoardFormData(request, image);
+  const { body, contentType } = buildBoardMultipart(request, image);
   const response = await client.patch<ApiResponse<BoardUpdateResult>>(
     `/api/v1/boards/${boardId}`,
-    formData,
+    body,
     {
-      headers: {
-        'Content-Type': undefined as unknown as string,
-      },
+      headers: { 'Content-Type': contentType },
       transformRequest: (data) => data,
     }
   );
