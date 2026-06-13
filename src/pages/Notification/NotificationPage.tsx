@@ -7,13 +7,15 @@ import {
   type NotificationItem,
   type SseNotification,
 } from '../../api/notification';
+import { getMemberProfile } from '../../api/member';
 import { NotificationSettingsPanel } from './NotificationSettingsPanel';
 
 // 표시용 정규화 타입. 목록 API 와 SSE 둘 다 이 형태로 변환해서 다룬다.
 type Notification = {
   id: number;
+  // actorId 로 프로필 이미지를 별도 fetch 해서 채움.
+  actorId?: number;
   avatar?: string;
-  // 목록 API 는 actor nickname 을 주지 않으므로 optional.
   nickname?: string;
   message: string;
   reply?: string;
@@ -24,10 +26,11 @@ type Notification = {
 // "2026-04-08T01:40:00" → "2026.04.08"
 const formatDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.');
 
-// SSE 페이로드 → Notification.
+// SSE 페이로드 / 목록 API item → Notification (둘 다 같은 형태).
 // tag 가 REPLY → "내 댓글에 답글을 달았습니다.", 그 외 → "내 글에 댓글을 달았습니다."
 const mapSseToNotification = (n: SseNotification): Notification => ({
   id: n.notificationId,
+  actorId: n.actorId,
   nickname: n.actorNickname,
   message:
     n.tag === 'REPLY'
@@ -38,13 +41,11 @@ const mapSseToNotification = (n: SseNotification): Notification => ({
   read: n.isRead,
 });
 
-// 목록 API item → Notification. 서버가 완성된 message 를 내려주므로 그대로 사용.
-const mapItemToNotification = (n: NotificationItem): Notification => ({
-  id: n.notificationId,
-  message: n.message,
-  date: formatDate(n.createdAt),
-  read: n.isRead,
-});
+const mapItemToNotification = mapSseToNotification;
+
+// memberId → profileImage URL 캐시 (드로어 열려있는 동안만).
+// null 값은 "조회 시도했지만 없음" 으로, 재시도 안 함.
+const profileImageCache = new Map<number, string | null>();
 
 const PAGE_SIZE = 20;
 
@@ -79,6 +80,63 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
     enabled: isOpen,
   });
 
+  // actor 프로필 이미지 채우기 — 알림에 actorId 가 있는데 avatar 가 비어있는 항목만 fetch.
+  // 같은 actor 가 여러 번 등장해도 캐시로 한 번만 호출.
+  useEffect(() => {
+    const toFetch: number[] = [];
+    for (const n of notifications) {
+      if (n.actorId == null || n.avatar) continue;
+      if (profileImageCache.has(n.actorId)) continue;
+      if (!toFetch.includes(n.actorId)) toFetch.push(n.actorId);
+    }
+    if (toFetch.length === 0) {
+      // 캐시에 이미 있는 actor 의 이미지를 알림에 반영 (아직 안 붙어있다면)
+      setNotifications((prev) => {
+        let changed = false;
+        const next = prev.map((n) => {
+          if (n.avatar || n.actorId == null) return n;
+          const cached = profileImageCache.get(n.actorId);
+          if (cached) {
+            changed = true;
+            return { ...n, avatar: cached };
+          }
+          return n;
+        });
+        return changed ? next : prev;
+      });
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all(
+      toFetch.map(async (memberId) => {
+        try {
+          const res = await getMemberProfile(memberId);
+          const img = res.result?.profileImage ?? null;
+          profileImageCache.set(memberId, img);
+          return { memberId, img };
+        } catch {
+          profileImageCache.set(memberId, null);
+          return { memberId, img: null };
+        }
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      const fetched = new Map(results.map((r) => [r.memberId, r.img]));
+      setNotifications((prev) =>
+        prev.map((n) => {
+          if (n.avatar || n.actorId == null) return n;
+          const img = fetched.get(n.actorId);
+          return img ? { ...n, avatar: img } : n;
+        })
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [notifications]);
+
   // Drawer 가 열릴 때마다 목록 새로 fetch (1페이지, 읽음/안읽음 모두)
   useEffect(() => {
     if (!isOpen) return;
@@ -101,8 +159,9 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
           );
           return;
         }
-        const unread = unreadRes.result?.notifications ?? [];
-        const read = readRes.result?.notifications ?? [];
+        // result 가 배열 직접 (pagination wrapper 없음)
+        const unread = unreadRes.result ?? [];
+        const read = readRes.result ?? [];
         // 안 읽음 먼저, 읽음 뒤로. 각 그룹 내에서는 id 내림차순(최신).
         const merged = [...unread, ...read]
           .map(mapItemToNotification)
