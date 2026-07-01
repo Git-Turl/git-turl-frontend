@@ -20,8 +20,8 @@ import {
   getMyProfile,
   getReportList,
   type GitTurlHistory,
-  type MyBoardItem,
-  type MyCommentItem,
+  type MemberBoardItem,
+  type MemberCommentItem,
   type ReportListItem,
 } from '../../api/member';
 import {
@@ -105,8 +105,8 @@ export function Home() {
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
   const [history, setHistory] = useState<GitTurlHistory | null>(null);
   const [recentReports, setRecentReports] = useState<ReportListItem[]>([]);
-  const [recentBoards, setRecentBoards] = useState<MyBoardItem[]>([]);
-  const [recentComments, setRecentComments] = useState<MyCommentItem[]>([]);
+  const [recentBoards, setRecentBoards] = useState<MemberBoardItem[]>([]);
+  const [recentComments, setRecentComments] = useState<MemberCommentItem[]>([]);
   const [recommendCards, setRecommendCards] = useState<RecommendItem[]>([]);
   const navigate = useNavigate();
 
@@ -130,15 +130,15 @@ export function Home() {
     getMyBoards({ sort: 'latest', page: 0, size: 5 })
       .then((res) => {
         if (cancelled) return;
-        if (res.isSuccess && res.result?.posts) setRecentBoards(res.result.posts);
+        if (res.isSuccess && res.result?.boardList) setRecentBoards(res.result.boardList);
       })
       .catch((err) => console.error('[home] my boards load failed', err));
 
     getMyComments({ sort: 'latest', page: 0, size: 5 })
       .then((res) => {
         if (cancelled) return;
-        if (res.isSuccess && res.result?.comments) {
-          setRecentComments(res.result.comments);
+        if (res.isSuccess && res.result?.commentList) {
+          setRecentComments(res.result.commentList);
         }
       })
       .catch((err) => console.error('[home] my comments load failed', err));
@@ -271,7 +271,7 @@ export function Home() {
     icon: ThumbsUp,
     iconBg: '#FEF7E6',
     iconColor: '#FECA3F',
-    title: `'${c.postTitle}'에 댓글을 작성했어요`,
+    title: `'${c.boardTitle}'에 댓글을 작성했어요`,
     time: relativeTime(c.createdAt),
     createdAt: c.createdAt,
   }));

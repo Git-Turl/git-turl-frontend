@@ -5,8 +5,8 @@ import {
   getMyBoards,
   getMyComments,
   getReportList,
-  type MyBoardItem,
-  type MyCommentItem,
+  type MemberBoardItem,
+  type MemberCommentItem,
   type ReportListItem,
 } from '../../api/member';
 
@@ -42,8 +42,8 @@ const PAGE_SIZE = 30;
 export function ActivityPage() {
   const navigate = useNavigate();
   const [reports, setReports] = useState<ReportListItem[]>([]);
-  const [boards, setBoards] = useState<MyBoardItem[]>([]);
-  const [comments, setComments] = useState<MyCommentItem[]>([]);
+  const [boards, setBoards] = useState<MemberBoardItem[]>([]);
+  const [comments, setComments] = useState<MemberCommentItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,11 +55,11 @@ export function ActivityPage() {
         .then((res) => (res.isSuccess && res.result?.data ? res.result.data : []))
         .catch(() => []),
       getMyBoards({ sort: 'latest', page: 0, size: PAGE_SIZE })
-        .then((res) => (res.isSuccess && res.result?.posts ? res.result.posts : []))
+        .then((res) => (res.isSuccess && res.result?.boardList ? res.result.boardList : []))
         .catch(() => []),
       getMyComments({ sort: 'latest', page: 0, size: PAGE_SIZE })
         .then((res) =>
-          res.isSuccess && res.result?.comments ? res.result.comments : []
+          res.isSuccess && res.result?.commentList ? res.result.commentList : []
         )
         .catch(() => []),
     ])
@@ -95,17 +95,17 @@ export function ActivityPage() {
     title: `'${b.title}' 게시글을 작성했어요`,
     time: relativeTime(b.createdAt),
     createdAt: b.createdAt,
-    onClick: () => navigate(`/community/${b.postId}`),
+    onClick: () => navigate(`/community/${b.boardId}`),
   }));
 
   const commentActivities: Activity[] = comments.map((c) => ({
     icon: ThumbsUp,
     iconBg: '#FEF7E6',
     iconColor: '#FECA3F',
-    title: `'${c.postTitle}'에 댓글을 작성했어요`,
+    title: `'${c.boardTitle}'에 댓글을 작성했어요`,
     time: relativeTime(c.createdAt),
     createdAt: c.createdAt,
-    onClick: () => navigate(`/community/${c.postId}`),
+    onClick: () => navigate(`/community/${c.boardId}`),
   }));
 
   const activities = [
