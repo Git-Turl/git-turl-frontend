@@ -126,7 +126,12 @@ export function OtherProfile() {
           setMyComments(commentsRes.result.commentList);
         }
         if (reportsRes.isSuccess && reportsRes.result?.data) {
-          setPublicReports(reportsRes.result.data);
+          // 목록 API 가 PRIVATE 도 섞어서 주는 케이스 방어 — status 필드가 있으면 PUBLIC 만 통과.
+          // 필드 없으면(구버전) 전부 통과.
+          const publicOnly = reportsRes.result.data.filter(
+            (r) => r.status === undefined || r.status === 'PUBLIC'
+          );
+          setPublicReports(publicOnly);
         }
       })
       .catch((err) => {
@@ -245,6 +250,7 @@ export function OtherProfile() {
                 tags:
                   r.questionCount > 0 ? [`질문 ${r.questionCount}개`] : [],
               }))}
+              onCardClick={(id) => navigate(`/analytics/detail/${id}`)}
             />
 
             {/* 최근 게시글 */}

@@ -429,6 +429,8 @@ export type MemberReportItem = {
   description: string;
   createdAt: string; // YYYY-MM-DD
   questionCount: number;
+  // 백엔드가 목록에 status 를 포함해 주면 프론트에서 PUBLIC 만 필터해서 표시.
+  status?: 'PUBLIC' | 'PRIVATE';
 };
 
 export type MemberReportListResult = {

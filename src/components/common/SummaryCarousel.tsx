@@ -13,9 +13,10 @@ interface Summary {
 
 interface SummaryCarouselProps {
   summaries: Summary[];
+  onCardClick?: (id: string) => void;
 }
 
-export function SummaryCarousel({ summaries }: SummaryCarouselProps) {
+export function SummaryCarousel({ summaries, onCardClick }: SummaryCarouselProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const itemsPerPage = 2;
   const totalPages = Math.ceil(summaries.length / itemsPerPage);
@@ -66,6 +67,7 @@ export function SummaryCarousel({ summaries }: SummaryCarouselProps) {
         {currentSummaries.map((summary) => (
           <Card
             key={summary.id}
+            onClick={() => onCardClick?.(summary.id)}
             className="p-5 bg-white shadow-sm border border-sky-100 hover:shadow-md transition-shadow cursor-pointer"
           >
             <div className="space-y-3">
