@@ -27,12 +27,18 @@ export function AnalyticsLoading() {
         }
       } catch (error: any) {
         console.error('분석본 조회 실패:', error);
-        
-        // 404 에러면 분석본이 없으므로 목록으로 이동
-        if (error.response?.status === 404) {
+        const status = error.response?.status;
+
+        // 404: 분석본 자체가 없음 → 목록으로
+        // 401/403: 권한 없음 → 재시도 무의미 (계속 403 나올 뿐). 목록으로.
+        //   ※ 재시도 루프가 백엔드 폭격 원인이었음.
+        // 그 외 (5xx 등): 아직 생성 중일 수 있으니 재시도
+        if (status === 404) {
+          navigate('/analytics');
+        } else if (status === 401 || status === 403) {
+          alert('해당 요약본에 대한 접근 권한이 없습니다.');
           navigate('/analytics');
         } else {
-          // 기타 에러는 재시도
           setTimeout(checkReportStatus, 3000);
         }
       }

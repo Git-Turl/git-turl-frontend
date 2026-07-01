@@ -40,12 +40,19 @@ export function AnalyticsDetail() {
         }
       } catch (error: any) {
         console.error('분석본 상세 조회 실패:', error);
-        
-        // 404 에러면 목록으로 이동
-        if (error.response?.status === 404) {
+        const status = error.response?.status;
+
+        // 404: 존재하지 않음 → 목록으로
+        // 401/403: 권한 없음 (비공개/타인 소유) → 무한 폴링 하지 말고 뒤로가기
+        //   - 이전에 다른 화면(OtherProfile 등)에서 왔으면 그리로, 아니면 목록으로
+        if (status === 404) {
           navigate('/analytics');
+        } else if (status === 401 || status === 403) {
+          alert('해당 요약본에 대한 접근 권한이 없습니다.');
+          if (window.history.length > 1) navigate(-1);
+          else navigate('/home');
         } else {
-          // 기타 에러도 로딩 페이지로
+          // 그 외 (5xx 등): "아직 생성 중일 수도" → 로딩 페이지에서 폴링
           navigate(`/analytics/loading?reportId=${id}`);
         }
       } finally {
