@@ -310,7 +310,7 @@ export function AnalyticsDetail() {
                         <p className="text-sm text-sky-600">내 커밋</p>
                       </div>
                       <div className="bg-green-50 p-4 rounded-lg text-center">
-                        <p className="text-2xl font-bold text-green-900">{(analysisData.content.content.commitStats.myCommitRate * 100).toFixed(1)}%</p>
+                        <p className="text-2xl font-bold text-green-900">{analysisData.content.content.commitStats.myCommitRate.toFixed(1)}%</p>
                         <p className="text-sm text-green-600">기여도</p>
                       </div>
                     </div>
