@@ -1,6 +1,5 @@
 import { ArrowRight, MessageSquare, Users } from 'lucide-react'
 import analyticsPreview from '../../assets/img/analytics-preview.png'
-import voicePreivewfrom from '../../assets/img/voice-preview.png'
 import {
   Bar,
   BarChart,

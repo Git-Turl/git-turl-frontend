@@ -21,15 +21,6 @@ import {
 } from '../../api/member';
 import defaultProfile from '../../assets/img/img_profile.svg';
 
-// 한글 받침 유무로 이/가 선택. 받침 없으면 가.
-const subjectParticle = (name: string) => {
-  if (!name) return '이';
-  const last = name[name.length - 1];
-  const code = last.charCodeAt(0);
-  if (code < 0xac00 || code > 0xd7a3) return '이';
-  return (code - 0xac00) % 28 === 0 ? '가' : '이';
-};
-
 const JOB_LABEL: Record<JobType, string> = {
   FRONTEND: '프론트엔드',
   BACKEND: '백엔드',
@@ -169,7 +160,6 @@ export function OtherProfile() {
   }
 
   const nickname = profile.nickname || '사용자';
-  const particle = subjectParticle(nickname);
   const githubUrl = profile.githubId
     ? `https://github.com/${profile.githubId}`
     : '#';

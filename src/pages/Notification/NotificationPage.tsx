@@ -4,7 +4,6 @@ import { useNotificationSSE } from '../../hooks/useNotificationSSE';
 import {
   getNotifications,
   markNotificationAsRead,
-  type NotificationItem,
   type SseNotification,
 } from '../../api/notification';
 import { getMemberProfile } from '../../api/member';
