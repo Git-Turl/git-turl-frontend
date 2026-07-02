@@ -1,0 +1,277 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
+import { Plus, Calendar, Mic, Trash2 } from 'lucide-react';
+import { Card } from '../../components/ui/card';
+import {
+  getAllVoiceQuestions,
+  getVoiceAnswer,
+  getVoiceReports,
+  type ReportSummary,
+} from '../../api/voiceInterview';
+import { deleteAnswer, deleteQuestion } from '../../api/member';
+
+type VoiceInterviewItem = {
+  id: number;
+  repoName: string;
+  questionCount: number;
+  createdAt: string; // YYYY.MM.DD 표시용
+};
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}.${mm}.${dd}`;
+}
+
+export function VoiceInterview() {
+  const [filterMode, setFilterMode] = useState<'all' | 'date'>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const [voiceInterviews, setVoiceInterviews] = useState<VoiceInterviewItem[]>(
+    []
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+
+  // 카드 하나 = report 하나. 답변+질문을 다 지워야 새로고침 후에도 카드가 사라진다.
+  // (report의 questionCount > 0 필터로 노출되기 때문)
+  // 각 질문에 대해: 답변이 있으면 답변(+음성파일) → 질문 순으로 삭제. 답변 없으면 질문만.
+  const handleDeleteInterview = async (reportId: number) => {
+    if (deletingIds.has(reportId)) return;
+    setDeletingIds((prev) => new Set(prev).add(reportId));
+    try {
+      const questions = await getAllVoiceQuestions(reportId);
+      await Promise.all(
+        questions.map(async (q) => {
+          try {
+            const res = await getVoiceAnswer(q.questionId);
+            const answerId = res.result?.answerId;
+            if (answerId) await deleteAnswer(answerId);
+          } catch {
+            // 미답변/패스 질문은 답변 조회 실패 → 무시하고 질문만 지움
+          }
+          try {
+            await deleteQuestion(q.questionId);
+          } catch {
+            // 개별 질문 삭제 실패는 다음 질문 진행에 영향 없도록 통과
+          }
+        })
+      );
+      setVoiceInterviews((prev) => prev.filter((i) => i.id !== reportId));
+    } finally {
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(reportId);
+        return next;
+      });
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getVoiceReports()
+      .then((reports: ReportSummary[]) => {
+        if (cancelled) return;
+        // 음성 질문이 1개 이상 있는 요약본만 음성 면접 내역으로 노출
+        const items: VoiceInterviewItem[] = reports
+          .filter((r) => (r.questionCount ?? 0) > 0)
+          .map((r) => ({
+            id: r.reportId,
+            repoName: r.repoName,
+            questionCount: r.questionCount,
+            createdAt: formatDate(r.createdAt),
+          }));
+        setVoiceInterviews(items);
+      })
+      .catch(() => {
+        if (!cancelled) setError('음성 면접 내역을 불러오지 못했습니다.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredInterviews = voiceInterviews.filter((interview) => {
+    if (filterMode === 'all') return true;
+
+    const itemDate = new Date(interview.createdAt.replace(/\./g, '-'));
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+
+    if (start && itemDate < start) return false;
+    if (end && itemDate > end) return false;
+    return true;
+  });
+
+  return (
+    <div className="min-h-screen p-8 bg-[#F0F9FF]">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl text-gray-900 mb-2">음성 면접</h1>
+        </div>
+
+        <Card className="p-8 bg-white border border-sky-100 shadow-sm">
+          {/* 섹션 헤더 */}
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-xl text-gray-900">음성 면접 내역</h2>
+
+            {/* 필터 모드 토글 */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setFilterMode('all')}
+                  className={`px-4 py-2 rounded-md text-sm transition-all ${
+                    filterMode === 'all'
+                      ? 'bg-white text-sky-700 shadow-sm font-medium'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  전체
+                </button>
+                <button
+                  onClick={() => setFilterMode('date')}
+                  className={`px-4 py-2 rounded-md text-sm transition-all ${
+                    filterMode === 'date'
+                      ? 'bg-white text-sky-700 shadow-sm font-medium'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  기간별 조회
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 기간별 조회 선택기 */}
+          {filterMode === 'date' && (
+            <div className="flex items-center justify-end gap-3 mb-8 p-4 bg-sky-50 rounded-lg border border-sky-100">
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-700 font-medium">시작일:</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="px-3 py-2 border border-sky-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
+                />
+              </div>
+
+              <span className="text-gray-400">~</span>
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-700 font-medium">종료일:</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="px-3 py-2 border border-sky-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
+                />
+              </div>
+
+              {(startDate || endDate) && (
+                <button
+                  onClick={() => {
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  className="px-4 py-2 text-sm text-sky-700 bg-white border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors font-medium"
+                >
+                  초기화
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* 면접 내역 그리드 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* 새 음성 면접 생성 카드 */}
+            <Link to="/voice-interview/new">
+              <button className="h-48 border-2 border-dashed border-sky-300 rounded-lg hover:border-sky-500 hover:bg-sky-50 transition-all flex flex-col items-center justify-center gap-3 group w-full">
+                <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center group-hover:bg-sky-200 transition-colors">
+                  <Plus className="w-6 h-6 text-sky-600" />
+                </div>
+                <span className="text-sm text-sky-700">새 음성 질문 생성</span>
+              </button>
+            </Link>
+
+            {/* 로딩 / 에러 / 빈 상태 / 내역 카드 */}
+            {loading ? (
+              <div className="col-span-full text-center py-12 text-gray-500">
+                불러오는 중...
+              </div>
+            ) : error ? (
+              <div className="col-span-full text-center py-12 text-red-500">
+                {error}
+              </div>
+            ) : filteredInterviews.length > 0 ? (
+              filteredInterviews.map((interview) => {
+                const isDeleting = deletingIds.has(interview.id);
+                return (
+                <Link
+                  key={interview.id}
+                  to={`/voice-interview/feedback/${interview.id}`}
+                  className="block"
+                >
+                  <Card className="h-48 p-5 border border-sky-100 hover:shadow-lg hover:border-sky-300 transition-all cursor-pointer group">
+                    <div className="flex flex-col h-full">
+                      {/* 리포지토리 이름 */}
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="text-gray-900 group-hover:text-sky-700 transition-colors line-clamp-1 font-medium">
+                          {interview.repoName}
+                        </h3>
+                        <div className="flex items-center gap-1 px-2 py-1 bg-sky-50 text-sky-700 rounded text-xs font-medium">
+                          <Mic className="w-3 h-3" />
+                          <span>{interview.questionCount}</span>
+                        </div>
+                      </div>
+
+                      {/* 설명/정보 */}
+                      <p className="text-sm text-gray-600 mb-auto">
+                        음성 질문 {interview.questionCount}개
+                      </p>
+
+                      {/* 생성일 + 삭제 */}
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Calendar className="w-3 h-3" />
+                          <span>{interview.createdAt}</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteInterview(interview.id);
+                          }}
+                          disabled={isDeleting}
+                          aria-label="음성 면접 삭제"
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+                );
+              })
+            ) : filterMode === 'date' ? (
+              <div className="col-span-full text-center py-12 text-gray-500">
+                해당 기간에 생성된 음성 면접 질문이 없습니다.
+              </div>
+            ) : null}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}

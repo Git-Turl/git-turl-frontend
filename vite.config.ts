@@ -1,7 +1,19 @@
 import { defineConfig } from 'vite'
+import path from 'path'
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    tailwindcss(),
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+
+  // 여기에 .css, .tsx, .ts 파일은 절대 추가하지 말기
+  assetsInclude: ['**/*.svg', '**/*.csv'],
 })
