@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { ChevronsLeft, Settings, ArrowLeft } from 'lucide-react';
 import { useNotificationSSE } from '../../hooks/useNotificationSSE';
 import {
@@ -20,6 +21,8 @@ type Notification = {
   reply?: string;
   date: string;
   read: boolean;
+  // 클릭 시 이동할 게시글 id.
+  boardId?: number;
 };
 
 // "2026-04-08T01:40:00" → "2026.04.08"
@@ -38,6 +41,7 @@ const mapSseToNotification = (n: SseNotification): Notification => ({
   reply: n.previewContent,
   date: formatDate(n.createdAt),
   read: n.isRead,
+  boardId: n.boardId,
 });
 
 const mapItemToNotification = mapSseToNotification;
@@ -57,6 +61,7 @@ const SIDEBAR_WIDTH = 256; // w-64 (Tailwind) = 16rem = 256px
 const DRAWER_WIDTH = 420;
 
 export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -184,26 +189,31 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
   }, [isOpen, onClose]);
 
   const handleItemClick = (id: number) => {
-    // 이미 읽음이면 서버 호출 생략
     const target = notifications.find((n) => n.id === id);
-    if (!target || target.read) return;
+    if (!target) return;
 
-    // 낙관적 업데이트
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+    // 안 읽은 항목만 서버에 읽음 처리 (낙관적 업데이트 + 실패 시 롤백)
+    if (!target.read) {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      );
+      markNotificationAsRead(id)
+        .then((res) => {
+          if (!res.isSuccess) throw new Error(res.message);
+        })
+        .catch((err) => {
+          console.error('[notifications] mark-as-read failed', err);
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === id ? { ...n, read: false } : n))
+          );
+        });
+    }
 
-    markNotificationAsRead(id)
-      .then((res) => {
-        if (!res.isSuccess) throw new Error(res.message);
-      })
-      .catch((err) => {
-        // 실패 시 롤백
-        console.error('[notifications] mark-as-read failed', err);
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, read: false } : n))
-        );
-      });
+    // 해당 게시글로 이동 + 드로어 닫기.
+    if (target.boardId != null) {
+      onClose();
+      navigate(`/community/${target.boardId}`);
+    }
     // TODO: 알림 클릭 시 해당 게시글/댓글로 이동 (백엔드 알림 데이터에 link/boardId 필요)
   };
 
