@@ -272,7 +272,7 @@ export function CommunityList() {
         </div>
 
         <button
-          onClick={() => navigate('/community/write')}
+          onClick={() => navigate(`/community/write?type=${activeTab}`)}
           style={{
             display: 'flex',
             alignItems: 'center',

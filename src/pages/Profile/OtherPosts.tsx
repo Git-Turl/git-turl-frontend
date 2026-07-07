@@ -149,6 +149,10 @@ export function OtherPosts() {
                       <span>{b.likeCount}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
+                      <MessageCircle className="w-4 h-4 text-sky-500" />
+                      <span>{b.commentCount ?? 0}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-gray-400" />
                       <span>{formatDate(b.createdAt)}</span>
                     </div>
