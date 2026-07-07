@@ -315,7 +315,7 @@ export function Home() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: '#F0F9FF',
+            background: 'white',
             border: '1px solid #B8E6FE',
             minWidth: 0,
             boxSizing: 'border-box',
@@ -328,7 +328,7 @@ export function Home() {
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
+                objectFit: 'contain',
                 objectPosition: 'center',
               }}
               onError={(e) => {
