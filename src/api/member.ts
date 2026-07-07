@@ -307,6 +307,8 @@ export type MemberBoardItem = {
   boardType: MemberContentBoardType;
   writerName: string;
   likeCount: number;
+  // community 게시글 목록과 동일하게 백엔드가 내려주면 채워짐.
+  commentCount?: number;
   createdAt: string;
   // 스터디/프로젝트 한정 (옵셔널)
   studyTag?: string | null;

@@ -267,6 +267,10 @@ export function OtherProfile() {
                             <span className="flex items-center gap-1">
                               <Heart className="w-3 h-3" /> {b.likeCount}
                             </span>
+                            <span className="flex items-center gap-1">
+                              <MessageCircle className="w-3 h-3" />{' '}
+                              {b.commentCount ?? 0}
+                            </span>
                           </div>
                         </div>
                         <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
