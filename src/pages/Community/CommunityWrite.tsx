@@ -116,7 +116,15 @@ export function CommunityWrite() {
   const editId = editIdParam ? Number(editIdParam) : null;
   const isEditMode = editId !== null && !isNaN(editId);
 
-  const [postType, setPostType] = useState<PostType>('project');
+  // ?type=study|project|free 로 진입한 게시판을 신규 작성 기본 타입으로 사용.
+  // 잘못된/없는 값이면 project 로 폴백.
+  const typeParam = searchParams.get('type');
+  const defaultPostType: PostType =
+    typeParam === 'study' || typeParam === 'project' || typeParam === 'free'
+      ? typeParam
+      : 'project';
+
+  const [postType, setPostType] = useState<PostType>(defaultPostType);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRecruiting, setIsRecruiting] = useState(true);
   const [isSettingOpen, setIsSettingOpen] = useState(false);
@@ -140,7 +148,7 @@ export function CommunityWrite() {
     if (!isEditMode || editId === null) {
       setTitle('');
       setContent('');
-      setPostType('project');
+      setPostType(defaultPostType);
       setIsRecruiting(true);
       setSettings({});
       setLoadingPost(false);
@@ -181,7 +189,7 @@ export function CommunityWrite() {
     return () => {
       cancelled = true;
     };
-  }, [isEditMode, editId, navigate]);
+  }, [isEditMode, editId, navigate, defaultPostType]);
 
   // HTML 본문에서 텍스트만 추출해 비어있는지 확인
   const isContentEmpty = (html: string): boolean => {
@@ -667,9 +675,43 @@ function PostSettingModal({
     initial?.platformTypes ?? []
   );
 
+  // 저장 시도 후 누락된 필수 항목 목록 (붉은 안내 문구용)
+  const [errors, setErrors] = useState<string[]>([]);
+
   if (!isOpen) return null;
 
+  // 게시판 타입별 백엔드 필수 필드 검증 → 누락 항목 라벨 배열 반환
+  const validate = (): string[] => {
+    const missing: string[] = [];
+    if (postType === 'project') {
+      if (!recruitCount) missing.push('모집 인원');
+      if (!deadline) missing.push('모집 마감 날짜');
+      if (recruitStacks.length === 0) missing.push('구인 스택');
+      if (usingStacks.length === 0) missing.push('사용하는 스택');
+      if (platformTypes.length === 0) missing.push('플랫폼');
+    } else if (postType === 'study') {
+      if (!recruitCount) missing.push('모집 인원');
+      if (!deadline) missing.push('모집 마감 날짜');
+      if (studyTags.length === 0) missing.push('스터디 태그');
+      if (studyTags.includes('자격증') && certificateTypes.length === 0)
+        missing.push('자격증 유형');
+    }
+    return missing;
+  };
+
+  // 닫을 때 붉은 안내 문구 초기화 (재진입 시 이전 오류 잔존 방지)
+  const handleClose = () => {
+    setErrors([]);
+    onClose();
+  };
+
   const handleSave = () => {
+    const missing = validate();
+    if (missing.length > 0) {
+      setErrors(missing);
+      return;
+    }
+    setErrors([]);
     onSave({
       recruitCount,
       deadline,
@@ -698,7 +740,7 @@ function PostSettingModal({
   return (
     <>
       <div
-        onClick={onClose}
+        onClick={handleClose}
         style={{
           position: 'fixed',
           inset: 0,
@@ -726,7 +768,7 @@ function PostSettingModal({
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={handleClose}
           style={{
             position: 'absolute',
             right: 20,
@@ -909,17 +951,31 @@ function PostSettingModal({
         <div
           style={{
             display: 'flex',
-            justifyContent: 'flex-end',
+            justifyContent: 'space-between',
+            alignItems: 'center',
             gap: 10,
             marginTop: 34,
           }}
         >
-          <button type="button" onClick={onClose} style={cancelButtonStyle}>
-            취소
-          </button>
-          <button type="button" onClick={handleSave} style={saveButtonStyle}>
-            저장
-          </button>
+          <div
+            style={{
+              color: '#E5484D',
+              fontSize: 14,
+              fontWeight: 600,
+              lineHeight: 1.4,
+            }}
+          >
+            {errors.length > 0 &&
+              `다음 항목을 입력해주세요: ${errors.join(', ')}`}
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+            <button type="button" onClick={handleClose} style={cancelButtonStyle}>
+              취소
+            </button>
+            <button type="button" onClick={handleSave} style={saveButtonStyle}>
+              저장
+            </button>
+          </div>
         </div>
       </div>
     </>
