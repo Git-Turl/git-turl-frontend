@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import type { MouseEvent } from 'react';
 import { Card } from '../ui/card';
 import { ChevronLeft, ChevronRight, Calendar, Star } from 'lucide-react';
+import { updateReportBookmark } from '../../api/member';
 
 interface Summary {
   id: string;
@@ -9,15 +11,25 @@ interface Summary {
   date: string;
   description: string;
   tags: string[];
+  bookmarked?: boolean;
 }
 
 interface SummaryCarouselProps {
   summaries: Summary[];
   onCardClick?: (id: string) => void;
+  // 본인 소유 요약본 목록에서만 true — 타인 요약본은 북마크 불가.
+  bookmarkable?: boolean;
 }
 
-export function SummaryCarousel({ summaries, onCardClick }: SummaryCarouselProps) {
+export function SummaryCarousel({
+  summaries,
+  onCardClick,
+  bookmarkable = false,
+}: SummaryCarouselProps) {
   const [currentPage, setCurrentPage] = useState(0);
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(
+    () => new Set(summaries.filter((s) => s.bookmarked).map((s) => s.id))
+  );
   const itemsPerPage = 2;
   const totalPages = Math.ceil(summaries.length / itemsPerPage);
   
@@ -36,6 +48,43 @@ export function SummaryCarousel({ summaries, onCardClick }: SummaryCarouselProps
   
   const prevPage = () => {
     setCurrentPage((prev) => (prev - 1 + totalPages) % totalPages);
+  };
+
+  const handleBookmarkToggle = async (
+    event: MouseEvent<HTMLButtonElement>,
+    id: string
+  ) => {
+    event.stopPropagation();
+    const reportId = Number(id);
+    if (!Number.isFinite(reportId)) return;
+
+    const wasBookmarked = bookmarkedIds.has(id);
+    setBookmarkedIds((prev) => {
+      const next = new Set(prev);
+      if (wasBookmarked) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+    try {
+      const response = await updateReportBookmark(reportId);
+      if (response.isSuccess && response.result) {
+        setBookmarkedIds((prev) => {
+          const next = new Set(prev);
+          if (response.result!.bookmarked) next.add(id);
+          else next.delete(id);
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error('북마크 변경 실패:', error);
+      setBookmarkedIds((prev) => {
+        const next = new Set(prev);
+        if (wasBookmarked) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+    }
   };
 
   return (
@@ -74,7 +123,26 @@ export function SummaryCarousel({ summaries, onCardClick }: SummaryCarouselProps
               {/* 제목 */}
               <div className="flex items-start justify-between">
                 <h4 className="text-gray-900 line-clamp-1">{summary.title}</h4>
-                <Star className="w-4 h-4 text-sky-400 flex-shrink-0 ml-2" />
+                {bookmarkable ? (
+                  <button
+                    type="button"
+                    onClick={(e) => handleBookmarkToggle(e, summary.id)}
+                    className="flex-shrink-0 ml-2 p-0.5 rounded hover:bg-sky-50 transition-colors"
+                    aria-label={
+                      bookmarkedIds.has(summary.id) ? '북마크 해제' : '북마크 추가'
+                    }
+                  >
+                    <Star
+                      className={`w-4 h-4 transition-colors ${
+                        bookmarkedIds.has(summary.id)
+                          ? 'text-yellow-400 fill-yellow-400'
+                          : 'text-sky-400'
+                      }`}
+                    />
+                  </button>
+                ) : (
+                  <Star className="w-4 h-4 text-sky-400 flex-shrink-0 ml-2" />
+                )}
               </div>
               
               {/* 리포지토리 */}

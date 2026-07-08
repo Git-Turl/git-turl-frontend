@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Plus, Calendar } from 'lucide-react';
+import type { MouseEvent } from 'react';
+import { Plus, Calendar, Star } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { Card } from '../../components/ui/card';
-import { getReportList, type ReportListItem, type ReportListParams } from '../../api/member';
+import {
+  getReportList,
+  updateReportBookmark,
+  type ReportListItem,
+  type ReportListParams,
+} from '../../api/member';
 
 export function Analytics() {
   const navigate = useNavigate();
@@ -51,6 +57,41 @@ export function Analytics() {
 
   const formatDisplayDate = (dateStr: string) => {
     return dateStr.replace(/-/g, '.');
+  };
+
+  const handleBookmarkToggle = async (
+    e: MouseEvent<HTMLButtonElement>,
+    reportId: number
+  ) => {
+    e.stopPropagation();
+    const wasBookmarked =
+      reports.find((r) => r.reportId === reportId)?.bookmarked ?? false;
+
+    setReports((prev) =>
+      prev.map((r) =>
+        r.reportId === reportId ? { ...r, bookmarked: !wasBookmarked } : r
+      )
+    );
+
+    try {
+      const response = await updateReportBookmark(reportId);
+      if (response.isSuccess && response.result) {
+        setReports((prev) =>
+          prev.map((r) =>
+            r.reportId === reportId
+              ? { ...r, bookmarked: response.result!.bookmarked }
+              : r
+          )
+        );
+      }
+    } catch (error) {
+      console.error('북마크 변경 실패:', error);
+      setReports((prev) =>
+        prev.map((r) =>
+          r.reportId === reportId ? { ...r, bookmarked: wasBookmarked } : r
+        )
+      );
+    }
   };
 
   return (
@@ -166,6 +207,22 @@ export function Analytics() {
                       <h3 className="text-gray-900 group-hover:text-sky-700 transition-colors line-clamp-1">
                         {report.reportTitle ?? report.repoName ?? `분석본 #${report.reportId}`}
                       </h3>
+                      <button
+                        type="button"
+                        onClick={(e) => handleBookmarkToggle(e, report.reportId)}
+                        className="flex-shrink-0 ml-2 p-0.5 rounded hover:bg-sky-50 transition-colors"
+                        aria-label={
+                          report.bookmarked ? '북마크 해제' : '북마크 추가'
+                        }
+                      >
+                        <Star
+                          className={`w-4 h-4 transition-colors ${
+                            report.bookmarked
+                              ? 'text-yellow-400 fill-yellow-400'
+                              : 'text-sky-400'
+                          }`}
+                        />
+                      </button>
                     </div>
 
                     {/* 설명 */}
