@@ -1,14 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { ChevronRight, FileDown, Pencil, Check, X } from 'lucide-react';
+import { ChevronRight, FileDown, Pencil, Check, X, Star } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { getReportDetail, updateReportStatus, updateReportTitle, createQuestions } from '../../api/member';
+import {
+  getReportDetail,
+  getMyProfile,
+  updateReportStatus,
+  updateReportTitle,
+  updateReportBookmark,
+  createQuestions,
+} from '../../api/member';
 
 export function AnalyticsDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isPublic, setIsPublic] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isUpdatingBookmark, setIsUpdatingBookmark] = useState(false);
+  const [isOwnReport, setIsOwnReport] = useState(false);
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -29,11 +39,19 @@ export function AnalyticsDetail() {
       }
 
       try {
-        const response = await getReportDetail(Number(id));
+        const [response, myProfileResponse] = await Promise.all([
+          getReportDetail(Number(id)),
+          getMyProfile().catch(() => null),
+        ]);
         if (response.isSuccess && response.result) {
           setAnalysisData(response.result);
           setIsPublic(response.result.status === 'PUBLIC');
+          setIsBookmarked(response.result.bookmarked ?? false);
           setTitle(response.result.reportTitle ?? response.result.repoName);
+          setIsOwnReport(
+            !!myProfileResponse?.result?.githubId &&
+              myProfileResponse.result.githubId === response.result.githubId
+          );
         } else {
           // 아직 준비되지 않았으면 로딩 페이지로
           navigate(`/analytics/loading?reportId=${id}`);
@@ -143,6 +161,27 @@ export function AnalyticsDetail() {
     }
   };
 
+  const handleBookmarkToggle = async () => {
+    if (!id || isUpdatingBookmark || !isOwnReport) return;
+
+    const wasBookmarked = isBookmarked;
+    setIsUpdatingBookmark(true);
+    setIsBookmarked(!wasBookmarked);
+
+    try {
+      const response = await updateReportBookmark(Number(id));
+      if (response.isSuccess && response.result) {
+        setIsBookmarked(response.result.bookmarked);
+      }
+    } catch (error: any) {
+      console.error('북마크 변경 실패:', error);
+      setIsBookmarked(wasBookmarked);
+      alert('북마크 변경에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsUpdatingBookmark(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen p-8 bg-[#F0F9FF] flex items-center justify-center">
@@ -230,6 +269,24 @@ export function AnalyticsDetail() {
             </div>
 
             <div className="flex flex-col items-end gap-3 print:hidden">
+              {/* 북마크 버튼 — 본인 소유 요약본에서만 표시 */}
+              {isOwnReport && (
+                <button
+                  onClick={handleBookmarkToggle}
+                  disabled={isUpdatingBookmark}
+                  className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                    isBookmarked
+                      ? 'text-yellow-500'
+                      : 'text-gray-400 hover:text-yellow-500'
+                  } ${isUpdatingBookmark ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <Star
+                    className={`w-4 h-4 ${isBookmarked ? 'fill-yellow-400' : ''}`}
+                  />
+                  {isBookmarked ? '북마크됨' : '북마크'}
+                </button>
+              )}
+
               {/* 공개/비공개 토글 스위치 */}
               <div className="flex items-center gap-3">
                 <button
