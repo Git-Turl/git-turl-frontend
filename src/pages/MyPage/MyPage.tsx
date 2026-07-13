@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { ProfileCard } from '../../components/common/ProfileCard';
 import { GitHubCard } from '../../components/common/GitHubCard';
 import { SummaryCarousel } from '../../components/common/SummaryCarousel';
@@ -6,13 +7,15 @@ import {
   getMyHistory,
   getMyProfile,
   getProfileImage,
-  getRepositories,
+  getReportList,
   type GitTurlHistory,
+  type ReportListItem,
 } from '../../api/member';
 import { enumListToStacks } from '../../utils/stackMapping';
 import defaultProfile from '../../assets/img/img_profile.svg';
 
 export function MyPage() {
+  const navigate = useNavigate();
   const [profileData, setProfileData] = useState<{
     profileImage: string;
     nickname: string;
@@ -28,7 +31,7 @@ export function MyPage() {
   });
 
   const [loading, setLoading] = useState(true);
-  const [repositories, setRepositories] = useState<any[]>([]);
+  const [reports, setReports] = useState<ReportListItem[]>([]);
   const [history, setHistory] = useState<GitTurlHistory | null>(null);
 
   useEffect(() => {
@@ -49,14 +52,22 @@ export function MyPage() {
           console.log('프로필 이미지가 없습니다. 기본 이미지를 사용합니다.');
         }
 
-        // 레포지토리 목록 조회
+        // 내 분석본 목록 조회 (공개 요약 카드용 — PUBLIC 만)
         try {
-          const repoResponse = await getRepositories();
-          if (repoResponse.isSuccess && repoResponse.result) {
-            setRepositories(repoResponse.result);
+          const reportResponse = await getReportList({
+            answerType: 'ALL',
+            pageSize: 4,
+            status: 'PUBLIC',
+          });
+          if (reportResponse.isSuccess && reportResponse.result) {
+            // 백엔드가 status 필터를 안 지켜주는 경우 방어 — status 필드가 있으면 PUBLIC 만 통과.
+            const publicOnly = reportResponse.result.data.filter(
+              (r) => r.status === undefined || r.status === 'PUBLIC'
+            );
+            setReports(publicOnly);
           }
-        } catch (repoError) {
-          console.error('레포지토리 목록 로딩 실패:', repoError);
+        } catch (reportError) {
+          console.error('분석본 목록 로딩 실패:', reportError);
         }
 
         // 깃털 히스토리 조회
@@ -109,14 +120,15 @@ export function MyPage() {
     githubUrl: `https://github.com/${profileData.githubId}`,
   };
 
-  // API에서 받은 레포지토리 데이터를 SummaryCarousel 형식으로 변환
-  const summaries = repositories.map((repo, index) => ({
-    id: String(index + 1),
-    title: repo.name,
-    repository: repo.fullName,
-    date: new Date(repo.updatedAt).toLocaleDateString('ko-KR'),
-    description: repo.description || '설명이 없는 레포지토리입니다.',
-    tags: [], // API에서 태그 정보가 없으므로 빈 배열
+  // 내 분석본 데이터를 SummaryCarousel 형식으로 변환
+  const summaries = reports.map((report) => ({
+    id: String(report.reportId),
+    title: report.reportTitle ?? report.repoName ?? `분석본 #${report.reportId}`,
+    repository: report.repoName ?? '',
+    date: report.createdAt.replace(/-/g, '.'),
+    description: report.description || '설명이 없는 분석본입니다.',
+    tags: report.questionCount > 0 ? [`질문 ${report.questionCount}개`] : [],
+    bookmarked: report.bookmarked ?? false,
   }));
 
   return (
@@ -176,7 +188,11 @@ export function MyPage() {
             />
 
             {/* 공개 요약 */}
-            <SummaryCarousel summaries={summaries} />
+            <SummaryCarousel
+              summaries={summaries}
+              onCardClick={(id) => navigate(`/analytics/detail/${id}`)}
+              bookmarkable
+            />
           </div>
         </div>
       </div>

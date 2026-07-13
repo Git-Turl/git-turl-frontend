@@ -166,6 +166,7 @@ export type ReportDetail = {
   status: 'PUBLIC' | 'PRIVATE';
   createdAt: string;
   content: Content | null;
+  bookmarked?: boolean;
 };
 
 // 분석본 목록 조회 타입
@@ -176,6 +177,8 @@ export type ReportListItem = {
   description: string | null;
   createdAt: string;
   questionCount: number;
+  bookmarked?: boolean;
+  status?: 'PUBLIC' | 'PRIVATE';
 };
 
 export type ReportListResponse = {
@@ -433,6 +436,7 @@ export type MemberReportItem = {
   questionCount: number;
   // 백엔드가 목록에 status 를 포함해 주면 프론트에서 PUBLIC 만 필터해서 표시.
   status?: 'PUBLIC' | 'PRIVATE';
+  bookmarked?: boolean;
 };
 
 export type MemberReportListResult = {
@@ -670,6 +674,24 @@ export const updateReportTitle = async (
   const response = await client.patch<ApiResponse<UpdateReportTitleResult>>(
     `/api/v1/reports/${reportId}/title?reportId=${reportId}`,
     data
+  );
+  return response.data;
+};
+
+/**
+ * 분석본 북마크 여부 수정
+ * PATCH /api/v1/reports/{reportId}/bookmark
+ * 기본값 false. 요청 시 false → true, true → false 로 토글됨.
+ */
+export type UpdateReportBookmarkResult = {
+  bookmarked: boolean;
+};
+
+export const updateReportBookmark = async (
+  reportId: number
+): Promise<ApiResponse<UpdateReportBookmarkResult>> => {
+  const response = await client.patch<ApiResponse<UpdateReportBookmarkResult>>(
+    `/api/v1/reports/${reportId}/bookmark?reportId=${reportId}`
   );
   return response.data;
 };
