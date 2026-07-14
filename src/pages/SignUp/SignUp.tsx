@@ -1,12 +1,13 @@
 import { useState, useRef } from 'react';
 import { CircleCheck, CircleX, User, Camera } from 'lucide-react';
 import { StackSelectModal } from '../StackSelectModal.tsx';
-import { submitOnboarding } from '../../api/member';
+import { submitOnboarding, checkNickname } from '../../api/member';
 import { fieldToJobType, stacksToEnumList } from '../../utils/stackMapping';
 
 export function SignUp() {
   const [nickname, setNickname] = useState('');
   const [nicknameCheck, setNicknameCheck] = useState<null | boolean>(null);
+  const [isCheckingNickname, setIsCheckingNickname] = useState(false);
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [isStackModalOpen, setIsStackModalOpen] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -15,13 +16,23 @@ export function SignUp() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDuplicateCheck = () => {
-    if (!nickname.trim()) {
-      alert('닉네임을 입력해주세요');
+  const handleDuplicateCheck = async () => {
+    if (!nickname.trim() || nickname.length > 20) {
+      setNicknameCheck(false);
       return;
     }
-    const isDuplicate = nickname === 'test';
-    setNicknameCheck(!isDuplicate);
+    if (isCheckingNickname) return;
+
+    setIsCheckingNickname(true);
+    try {
+      const res = await checkNickname({ nickname: nickname.trim() });
+      // isSuccess === true → 사용 가능한 닉네임(체크), false → 이미 사용 중(X).
+      setNicknameCheck(res.isSuccess);
+    } catch {
+      setNicknameCheck(false);
+    } finally {
+      setIsCheckingNickname(false);
+    }
   };
 
   const handleCameraClick = () => {
@@ -52,6 +63,10 @@ export function SignUp() {
     }
     if (nickname.length > 20) {
       alert('닉네임은 20자 이하여야 합니다.');
+      return;
+    }
+    if (nicknameCheck !== true) {
+      alert('닉네임 중복확인을 해주세요.');
       return;
     }
     if (!selectedField) {
@@ -211,11 +226,12 @@ export function SignUp() {
           >
             <div
               style={{
-                width: 100,
+                width: 120,
                 textAlign: 'right',
                 fontSize: 27,
                 fontFamily: 'Inter',
                 fontWeight: 500,
+                whiteSpace: 'nowrap',
               }}
             >
               닉네임
@@ -245,6 +261,7 @@ export function SignUp() {
               />
               <button
                 onClick={handleDuplicateCheck}
+                disabled={isCheckingNickname}
                 style={{
                   position: 'absolute',
                   right: 10,
@@ -258,10 +275,10 @@ export function SignUp() {
                   color: '#00AEEF',
                   fontSize: 17,
                   fontFamily: 'Inter',
-                  cursor: 'pointer',
+                  cursor: isCheckingNickname ? 'not-allowed' : 'pointer',
                 }}
               >
-                중복확인
+                {isCheckingNickname ? '확인 중' : '중복확인'}
               </button>
             </div>
             <div style={{ width: 40, display: 'flex', alignItems: 'center' }}>
@@ -286,11 +303,12 @@ export function SignUp() {
           >
             <div
               style={{
-                width: 100,
+                width: 120,
                 textAlign: 'right',
                 fontSize: 27,
                 fontFamily: 'Inter',
                 fontWeight: 500,
+                whiteSpace: 'nowrap',
               }}
             >
               희망분야
