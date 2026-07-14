@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { ChevronRight, FileDown, Pencil, Check, X, Star } from 'lucide-react';
+import { ChevronRight, FileDown, Pencil, Check, X, Star, Trash2 } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import {
@@ -9,6 +9,7 @@ import {
   updateReportStatus,
   updateReportTitle,
   updateReportBookmark,
+  deleteReport,
   createQuestions,
 } from '../../api/member';
 
@@ -18,6 +19,7 @@ export function AnalyticsDetail() {
   const [isPublic, setIsPublic] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isUpdatingBookmark, setIsUpdatingBookmark] = useState(false);
+  const [isDeletingReport, setIsDeletingReport] = useState(false);
   const [isOwnReport, setIsOwnReport] = useState(false);
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -182,6 +184,26 @@ export function AnalyticsDetail() {
     }
   };
 
+  const handleDeleteReport = async () => {
+    if (!id || isDeletingReport || !isOwnReport) return;
+    if (!confirm('정말 삭제하시겠습니까? 관련 질문과 답변도 모두 삭제됩니다.')) return;
+
+    setIsDeletingReport(true);
+    try {
+      const response = await deleteReport(Number(id));
+      if (response.isSuccess) {
+        navigate('/analytics');
+      } else {
+        alert(response.message || '삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('분석본 삭제 실패:', error);
+      alert('삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeletingReport(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen p-8 bg-[#F0F9FF] flex items-center justify-center">
@@ -305,15 +327,30 @@ export function AnalyticsDetail() {
                 </span>
               </div>
 
-              {/* PDF 다운로드 버튼 */}
-              <Button
-                onClick={handleDownloadPDF}
-                variant="outline"
-                className="flex items-center gap-2 px-4 py-2 border-sky-300 text-sky-700 hover:bg-sky-50 transition-colors"
-              >
-                <FileDown className="w-4 h-4" />
-                <span>pdf로 저장</span>
-              </Button>
+              <div className="flex items-center gap-3">
+                {/* 삭제 버튼 — 본인 소유 요약본에서만 표시 */}
+                {isOwnReport && (
+                  <Button
+                    onClick={handleDeleteReport}
+                    disabled={isDeletingReport}
+                    variant="outline"
+                    className="flex items-center gap-2 px-4 py-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>{isDeletingReport ? '삭제 중...' : '삭제'}</span>
+                  </Button>
+                )}
+
+                {/* PDF 다운로드 버튼 */}
+                <Button
+                  onClick={handleDownloadPDF}
+                  variant="outline"
+                  className="flex items-center gap-2 px-4 py-2 border-sky-300 text-sky-700 hover:bg-sky-50 transition-colors"
+                >
+                  <FileDown className="w-4 h-4" />
+                  <span>pdf로 저장</span>
+                </Button>
+              </div>
             </div>
           </div>
 
