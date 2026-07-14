@@ -82,7 +82,7 @@ export function Login() {
         </div>
         <button
           onClick={() => {
-            window.location.href = import.meta.env.VITE_GITHUB_OAUTH_URL;
+            window.location.href = `${import.meta.env.VITE_GITHUB_OAUTH_URL}?redirect_uri=${window.location.origin}`;
           }}
           style={{
             width: '100%',
