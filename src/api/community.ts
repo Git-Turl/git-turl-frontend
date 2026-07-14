@@ -511,13 +511,13 @@ export const deleteComment = async (
 
 /**
  * 댓글 좋아요 추가
- * POST /api/v1/{commentId}/likes
+ * POST /api/v1/comments/{commentId}/likes
  */
 export const toggleCommentLike = async (
   commentId: number
 ): Promise<ApiResponse<CommentLikeResult>> => {
   const response = await client.post<ApiResponse<CommentLikeResult>>(
-    `/api/v1/${commentId}/likes`
+    `/api/v1/comments/${commentId}/likes`
   );
   return response.data;
 };
@@ -530,13 +530,13 @@ export type CommentUnlikeResult = {
 
 /**
  * 댓글 좋아요 취소
- * DELETE /api/v1/{commentId}/likes
+ * DELETE /api/v1/commtens/{commentId}/likes
  */
 export const deleteCommentLike = async (
   commentId: number
 ): Promise<ApiResponse<CommentUnlikeResult>> => {
   const response = await client.delete<ApiResponse<CommentUnlikeResult>>(
-    `/api/v1/${commentId}/likes`
+    `/api/v1/commtens/${commentId}/likes`
   );
   return response.data;
 };
