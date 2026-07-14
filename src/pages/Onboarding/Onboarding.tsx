@@ -1,5 +1,9 @@
-import { ArrowRight, MessageSquare, Users } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
 import analyticsPreview from '../../assets/img/analytics-preview.png'
+import voicePreview from '../../assets/img/voice-preview.png'
+import textPreview from '../../assets/img/text-preview.png'
+import communityPreview from '../../assets/img/community-preview.png'
 import {
   Bar,
   BarChart,
@@ -34,8 +38,18 @@ const SURVEY_Q6 = [
 
 export function Onboarding() {
   const handleLogin = () => {
-    window.location.href = import.meta.env.VITE_GITHUB_OAUTH_URL
+    window.location.href = `${import.meta.env.VITE_GITHUB_OAUTH_URL}?redirect_uri=${window.location.origin}`
   }
+
+  // 카드 2 — 음성/텍스트 면접 미리보기 이미지가 3초마다 cross-fade 로 교체됨.
+  const interviewPreviews = [voicePreview, textPreview]
+  const [previewIndex, setPreviewIndex] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => {
+      setPreviewIndex((i) => (i + 1) % interviewPreviews.length)
+    }, 3000)
+    return () => clearInterval(id)
+  }, [])
 
   return (
     <div style={{
@@ -560,22 +574,26 @@ export function Onboarding() {
               flex: 1,
               background: 'rgba(217, 217, 217, 0.33)',
               borderRadius: 20,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'column',
-              gap: 15
+              overflow: 'hidden',
+              position: 'relative',
             }}>
-              <MessageSquare size={60} color="#00AEEF" />
-              <div style={{
-                color: '#00AEEF',
-                fontSize: 18,
-                fontFamily: 'Inter',
-                fontWeight: 600,
-                justifyContent: 'center'
-              }}>
-                면접 질문 예시
-              </div>
+              {interviewPreviews.map((src, idx) => (
+                <img
+                  key={src}
+                  src={src}
+                  alt={idx === 0 ? '음성 면접 미리보기' : '텍스트 면접 미리보기'}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'top center',
+                    opacity: previewIndex === idx ? 1 : 0,
+                    transition: 'opacity 0.8s ease-in-out',
+                  }}
+                />
+              ))}
             </div>
           </div>
 
@@ -642,21 +660,22 @@ export function Onboarding() {
               flex: 1,
               background: 'rgba(217, 217, 217, 0.33)',
               borderRadius: 20,
+              overflow: 'hidden',
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               justifyContent: 'center',
-              flexDirection: 'column',
-              gap: 15
             }}>
-              <Users size={60} color="#00AEEF" />
-              <div style={{
-                color: '#00AEEF',
-                fontSize: 18,
-                fontFamily: 'Inter',
-                fontWeight: 600
-              }}>
-                프로젝트 게시판
-              </div>
+              <img
+                src={communityPreview}
+                alt="프로젝트 게시판"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: 'top center',
+                  display: 'block',
+                }}
+              />
             </div>
           </div>
         </div>
