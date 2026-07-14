@@ -697,6 +697,20 @@ export const updateReportBookmark = async (
 };
 
 /**
+ * 분석본 삭제
+ * DELETE /api/v1/reports/{reportId}
+ * 해당 id의 분석본과 연관된 질문, 답변들도 함께 삭제됨.
+ */
+export const deleteReport = async (
+  reportId: number
+): Promise<ApiResponse<null>> => {
+  const response = await client.delete<ApiResponse<null>>(
+    `/api/v1/reports/${reportId}?reportId=${reportId}`
+  );
+  return response.data;
+};
+
+/**
  * 답변 저장
  * POST /api/v1/questions/{questionId}/answers
  */
