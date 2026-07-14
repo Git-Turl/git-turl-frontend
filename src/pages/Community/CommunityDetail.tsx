@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CornerDownRight,
+  Lock,
 } from 'lucide-react';
 import {
   createComment,
@@ -20,9 +21,13 @@ import {
   toggleBoardLike,
   toggleCommentLike,
   updateComment,
+  boardStacksToLabels,
+  PLATFORM_TYPE_LABEL,
   type BoardDetail,
   type BoardType,
   type Comment,
+  type StudyTag,
+  type CertificateType,
 } from '../../api/community';
 import { getRecruitStatus } from '../../utils/localBoardStatus';
 import { AuthorLink, getMyMemberId } from '../../components/common/AuthorLink';
@@ -33,6 +38,84 @@ const boardTypeLabel: Record<BoardType, string> = {
   STUDY: '스터디',
   PROJECT: '프로젝트',
   FORUM: '자유게시판',
+};
+
+const studyTagLabel: Record<StudyTag, string> = {
+  CERTIFICATE: '자격증',
+  CODING_TEST: '코딩테스트',
+  LANGUAGE: '어학',
+};
+
+const certificateTypeLabel: Record<CertificateType, string> = {
+  WRITTEN: '필기',
+  PRACTICAL: '실기',
+};
+
+// 스택/설정 칩 한 줄. 라벨(선택) + 값들.
+function MetaChips({
+  label,
+  values,
+  accent = false,
+}: {
+  label?: string;
+  values: string[];
+  accent?: boolean;
+}) {
+  if (!values.length) return null;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 6,
+      }}
+    >
+      {label && (
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#6B7280',
+            marginRight: 2,
+          }}
+        >
+          {label}
+        </span>
+      )}
+      {values.map((v) => (
+        <span
+          key={v}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '4px 10px',
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 600,
+            background: accent ? '#00AEEF' : '#F0F9FF',
+            color: accent ? 'white' : '#0091C7',
+            border: accent ? 'none' : '1px solid #B8E6FE',
+          }}
+        >
+          {v}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// 비밀댓글 체크박스 라벨 공통 스타일
+const secretToggleStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+  fontSize: 12,
+  fontWeight: 500,
+  color: '#6B7280',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  userSelect: 'none',
 };
 
 // 작성자 아바타 — 프로필 이미지 URL 있으면 img, 없으면 기본 이미지.
@@ -91,6 +174,7 @@ export function CommunityDetail() {
   const [commentTotalPages, setCommentTotalPages] = useState(1);
   const [commentTotalElements, setCommentTotalElements] = useState(0);
   const [newComment, setNewComment] = useState('');
+  const [newCommentSecret, setNewCommentSecret] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -202,12 +286,17 @@ export function CommunityDetail() {
     );
   }
 
-  const addReply = async (parentId: number, content: string) => {
+  const addReply = async (
+    parentId: number,
+    content: string,
+    isSecret = false
+  ) => {
     if (!content.trim()) return;
     try {
       const res = await createComment(postId, {
         content: content.trim(),
         parentId,
+        isSecret,
       });
       if (res.isSuccess) {
         loadComments(commentPage);
@@ -222,9 +311,13 @@ export function CommunityDetail() {
   const handleSubmitComment = async () => {
     if (!newComment.trim()) return;
     try {
-      const res = await createComment(postId, { content: newComment.trim() });
+      const res = await createComment(postId, {
+        content: newComment.trim(),
+        isSecret: newCommentSecret,
+      });
       if (res.isSuccess) {
         setNewComment('');
+        setNewCommentSecret(false);
         loadComments(commentPage);
       } else {
         alert(res.message || '댓글 등록에 실패했습니다.');
@@ -558,6 +651,55 @@ export function CommunityDetail() {
           </span>
         </div>
 
+        {/* 프로젝트/스터디 게시판: 설정한 스택·플랫폼·태그를 상단에 노출 */}
+        {post.boardType !== 'FORUM' &&
+          (() => {
+            const recruit = boardStacksToLabels(post.recruitStacks);
+            const project = boardStacksToLabels(post.projectStacks);
+            const platforms = (post.platformTypes ?? []).map(
+              (p) => PLATFORM_TYPE_LABEL[p]
+            );
+            const studyChips: string[] = [];
+            if (post.boardType === 'STUDY') {
+              if (post.studyTag) studyChips.push(studyTagLabel[post.studyTag]);
+              if (post.certificateType)
+                studyChips.push(certificateTypeLabel[post.certificateType]);
+            }
+            // 모집 설정 (STUDY/PROJECT 공통): 인원 · 마감일
+            const recruitInfo: string[] = [];
+            if (post.recruitCount != null)
+              recruitInfo.push(`모집 ${post.recruitCount}명`);
+            if (post.recruitDeadline)
+              recruitInfo.push(`마감 ${post.recruitDeadline}`);
+            const hasAny =
+              recruit.length ||
+              project.length ||
+              platforms.length ||
+              studyChips.length ||
+              recruitInfo.length;
+            if (!hasAny) return null;
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  padding: '14px 16px',
+                  background: '#FAFCFF',
+                  border: '1px solid #E5F4FB',
+                  borderRadius: 12,
+                  marginBottom: 18,
+                }}
+              >
+                <MetaChips label="분류" values={studyChips} accent />
+                <MetaChips label="플랫폼" values={platforms} accent />
+                <MetaChips label="모집" values={recruitInfo} />
+                <MetaChips label="구인 스택" values={recruit} />
+                <MetaChips label="사용 스택" values={project} />
+              </div>
+            );
+          })()}
+
         <div style={{ height: 1, background: '#E5E7EB', marginBottom: 20 }} />
 
         {post.imageUrl && (
@@ -625,24 +767,44 @@ export function CommunityDetail() {
                 color: '#1F2937',
               }}
             />
-            <button
-              onClick={handleSubmitComment}
-              disabled={!newComment.trim()}
+            <div
               style={{
-                padding: '8px 18px',
-                background: newComment.trim() ? '#00AEEF' : '#D1D5DB',
-                color: 'white',
-                border: 'none',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: newComment.trim() ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                alignItems: 'flex-end',
+                alignSelf: 'stretch',
+                justifyContent: 'space-between',
                 flexShrink: 0,
-                alignSelf: 'flex-end',
               }}
             >
-              등록
-            </button>
+              <label style={secretToggleStyle}>
+                <input
+                  type="checkbox"
+                  checked={newCommentSecret}
+                  onChange={(e) => setNewCommentSecret(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <Lock size={12} />
+                비밀댓글
+              </label>
+              <button
+                onClick={handleSubmitComment}
+                disabled={!newComment.trim()}
+                style={{
+                  padding: '8px 18px',
+                  background: newComment.trim() ? '#00AEEF' : '#D1D5DB',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: newComment.trim() ? 'pointer' : 'not-allowed',
+                }}
+              >
+                등록
+              </button>
+            </div>
           </div>
 
           {topLevelComments.length === 0 ? (
@@ -661,8 +823,11 @@ export function CommunityDetail() {
               <CommentRow
                 key={comment.commentId}
                 comment={comment}
+                postWriterId={post.writerId}
                 replies={getReplies(comment.commentId)}
-                onReply={(content) => addReply(comment.commentId, content)}
+                onReply={(content, isSecret) =>
+                  addReply(comment.commentId, content, isSecret)
+                }
                 onDelete={handleDeleteComment}
                 onUpdate={handleUpdateComment}
                 onToggleLike={handleToggleCommentLike}
@@ -778,6 +943,7 @@ function CenterMessage({
 
 function CommentRow({
   comment,
+  postWriterId,
   replies,
   onReply,
   onDelete,
@@ -786,8 +952,9 @@ function CommentRow({
   isReply = false,
 }: {
   comment: Comment;
+  postWriterId?: number;
   replies?: Comment[];
-  onReply?: (content: string) => void;
+  onReply?: (content: string, isSecret: boolean) => void;
   onDelete?: (commentId: number) => void;
   onUpdate?: (
     commentId: number,
@@ -800,10 +967,22 @@ function CommentRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [replySecret, setReplySecret] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editText, setEditText] = useState(comment.content);
+  const [editSecret, setEditSecret] = useState(comment.isSecret);
   const [editSaving, setEditSaving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  // 비밀댓글은 게시글 작성자 + 댓글 작성자에게만 내용 공개.
+  // 그 외(비로그인 포함)에겐 잠금 문구만 노출.
+  const myId = getMyMemberId();
+  const isSecretHidden =
+    comment.isSecret &&
+    !(
+      myId != null &&
+      (myId === comment.writerId || myId === postWriterId)
+    );
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -816,8 +995,9 @@ function CommentRow({
 
   const handleSubmitReply = () => {
     if (!replyText.trim() || !onReply) return;
-    onReply(replyText);
+    onReply(replyText, replySecret);
     setReplyText('');
+    setReplySecret(false);
     setReplyOpen(false);
   };
 
@@ -840,15 +1020,54 @@ function CommentRow({
           </div>
         </AuthorLink>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, color: '#4A5565', marginBottom: 4 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              fontSize: 13,
+              color: '#4A5565',
+              marginBottom: 4,
+            }}
+          >
             <AuthorLink writerId={comment.writerId}>
               {comment.writerName}
             </AuthorLink>
             {' | '}
             {formatDate(comment.createdAt)}
+            {comment.isSecret && !isSecretHidden && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  color: '#00AEEF',
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
+              >
+                <Lock size={10} />
+                비밀
+              </span>
+            )}
           </div>
 
-          {editOpen ? (
+          {isSecretHidden ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 14,
+                color: '#9CA3AF',
+                fontStyle: 'italic',
+                marginBottom: 4,
+              }}
+            >
+              <Lock size={13} />
+              비밀 댓글입니다.
+            </div>
+          ) : editOpen ? (
             // 인라인 수정 모드
             <div style={{ marginBottom: 4 }}>
               <textarea
@@ -868,6 +1087,16 @@ function CommentRow({
                   boxSizing: 'border-box',
                 }}
               />
+              <label style={{ ...secretToggleStyle, marginTop: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={editSecret}
+                  onChange={(e) => setEditSecret(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <Lock size={12} />
+                비밀댓글
+              </label>
               <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                 <button
                   onClick={async () => {
@@ -876,7 +1105,7 @@ function CommentRow({
                     const ok = await onUpdate(
                       comment.commentId,
                       editText,
-                      comment.isSecret
+                      editSecret
                     );
                     setEditSaving(false);
                     if (ok) setEditOpen(false);
@@ -899,6 +1128,7 @@ function CommentRow({
                   onClick={() => {
                     setEditOpen(false);
                     setEditText(comment.content);
+                    setEditSecret(comment.isSecret);
                   }}
                   disabled={editSaving}
                   style={{
@@ -930,7 +1160,7 @@ function CommentRow({
             </div>
           )}
 
-          {!editOpen && (
+          {!editOpen && !isSecretHidden && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {/* 좋아요 */}
               {onToggleLike && (
@@ -980,10 +1210,8 @@ function CommentRow({
             </div>
           )}
         </div>
-        {(() => {
-              const myId = getMyMemberId();
-              return myId == null || myId === comment.writerId;
-            })() && (
+        {!isSecretHidden &&
+          (myId == null || myId === comment.writerId) && (
           <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
             <button
               onClick={() => setMenuOpen((v) => !v)}
@@ -1017,6 +1245,7 @@ function CommentRow({
                   onClick={() => {
                     setMenuOpen(false);
                     setEditText(comment.content);
+                    setEditSecret(comment.isSecret);
                     setEditOpen(true);
                   }}
                 >
@@ -1069,23 +1298,42 @@ function CommentRow({
               boxSizing: 'border-box',
             }}
           />
-          <button
-            onClick={handleSubmitReply}
-            disabled={!replyText.trim()}
+          <div
             style={{
-              padding: '8px 14px',
-              background: replyText.trim() ? '#00AEEF' : '#D1D5DB',
-              color: 'white',
-              border: 'none',
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: replyText.trim() ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+              alignItems: 'flex-end',
               flexShrink: 0,
             }}
           >
-            등록
-          </button>
+            <label style={secretToggleStyle}>
+              <input
+                type="checkbox"
+                checked={replySecret}
+                onChange={(e) => setReplySecret(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              <Lock size={12} />
+              비밀댓글
+            </label>
+            <button
+              onClick={handleSubmitReply}
+              disabled={!replyText.trim()}
+              style={{
+                padding: '8px 14px',
+                background: replyText.trim() ? '#00AEEF' : '#D1D5DB',
+                color: 'white',
+                border: 'none',
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: replyText.trim() ? 'pointer' : 'not-allowed',
+              }}
+            >
+              등록
+            </button>
+          </div>
         </div>
       )}
 
@@ -1095,6 +1343,7 @@ function CommentRow({
             <CommentRow
               key={reply.commentId}
               comment={reply}
+              postWriterId={postWriterId}
               isReply
               onDelete={onDelete}
               onUpdate={onUpdate}

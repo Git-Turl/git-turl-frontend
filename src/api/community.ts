@@ -139,6 +139,32 @@ export const labelsToBoardStacks = (labels: string[] | undefined): BoardStack[] 
   return Array.from(new Set(out));
 };
 
+// enum → UI 표시명 (BOARD_STACK_BY_LABEL 역방향). 상세 화면 스택 표시용.
+const BOARD_STACK_LABEL: Record<BoardStack, string> = Object.entries(
+  BOARD_STACK_BY_LABEL
+).reduce(
+  (acc, [label, enumVal]) => {
+    acc[enumVal] = label;
+    return acc;
+  },
+  {} as Record<BoardStack, string>
+);
+
+export const boardStacksToLabels = (
+  stacks: BoardStack[] | undefined
+): string[] => {
+  if (!stacks?.length) return [];
+  // 매핑에 없는 enum 은 그대로 노출 (표시 실패보다는 원문이 나음).
+  return stacks.map((s) => BOARD_STACK_LABEL[s] ?? s);
+};
+
+// 플랫폼 enum → UI 표시명.
+export const PLATFORM_TYPE_LABEL: Record<PlatformType, string> = {
+  WEB: '웹',
+  APP: '앱',
+  ETC: '기타',
+};
+
 export type BoardCreateRequest = {
   title: string;
   content: string;
