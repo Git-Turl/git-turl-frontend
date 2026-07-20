@@ -1,7 +1,11 @@
 import { useState, useRef } from 'react';
 import { CircleCheck, CircleX, User, Camera } from 'lucide-react';
 import { StackSelectModal } from '../StackSelectModal.tsx';
-import { submitOnboarding, checkNickname } from '../../api/member';
+import {
+  submitOnboarding,
+  checkNickname,
+  updateProfileImage,
+} from '../../api/member';
 import { fieldToJobType, stacksToEnumList } from '../../utils/stackMapping';
 
 export function SignUp() {
@@ -11,6 +15,8 @@ export function SignUp() {
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [isStackModalOpen, setIsStackModalOpen] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  // 업로드할 실제 파일 (미리보기용 objectURL 과 별개).
+  const [profileFile, setProfileFile] = useState<File | null>(null);
   const [selectedStacks, setSelectedStacks] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -26,8 +32,11 @@ export function SignUp() {
     setIsCheckingNickname(true);
     try {
       const res = await checkNickname({ nickname: nickname.trim() });
-      // isSuccess === true → 사용 가능한 닉네임(체크), false → 이미 사용 중(X).
-      setNicknameCheck(res.isSuccess);
+      // ⚠️ 백엔드가 중복이어도 isSuccess:true 를 주고 code 로 구분함.
+      //   MEMBER200_8 = "사용 할 수 없는 닉네임입니다" (중복/사용불가) → X
+      //   그 외 성공 코드 → 사용 가능 → 체크
+      const available = res.isSuccess && res.code !== 'MEMBER200_8';
+      setNicknameCheck(available);
     } catch {
       setNicknameCheck(false);
     } finally {
@@ -52,6 +61,7 @@ export function SignUp() {
     }
     const imageUrl = URL.createObjectURL(file);
     setProfileImage(imageUrl);
+    setProfileFile(file);
   };
 
   // 저장하기 핸들러
@@ -91,6 +101,17 @@ export function SignUp() {
         techStackList,
       });
       if (response.isSuccess) {
+        // 온보딩 성공 후 선택한 프로필 사진 업로드 (별도 multipart API).
+        if (profileFile) {
+          try {
+            const imgRes = await updateProfileImage(profileFile);
+            if (!imgRes.isSuccess) {
+              alert(imgRes.message || '프로필 사진 저장에 실패했습니다.');
+            }
+          } catch {
+            alert('프로필 사진 저장 중 오류가 발생했습니다.');
+          }
+        }
         window.location.href = '/home';
       } else {
         alert(response.message || '저장에 실패했습니다.');
