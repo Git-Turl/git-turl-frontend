@@ -944,6 +944,7 @@ function CenterMessage({
 function CommentRow({
   comment,
   postWriterId,
+  parentWriterId,
   replies,
   onReply,
   onDelete,
@@ -953,6 +954,8 @@ function CommentRow({
 }: {
   comment: Comment;
   postWriterId?: number;
+  // 대댓글 한정 — 답글이 달린 부모 댓글의 작성자 id.
+  parentWriterId?: number;
   replies?: Comment[];
   onReply?: (content: string, isSecret: boolean) => void;
   onDelete?: (commentId: number) => void;
@@ -974,14 +977,17 @@ function CommentRow({
   const [editSaving, setEditSaving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // 비밀댓글은 게시글 작성자 + 댓글 작성자에게만 내용 공개.
+  // 비밀댓글은 댓글 작성자 본인 + 게시글 작성자에게 공개.
+  // 대댓글이면 답글을 받은 부모 댓글 작성자에게도 공개 (본인에게 온 비밀 답글이므로).
   // 그 외(비로그인 포함)에겐 잠금 문구만 노출.
   const myId = getMyMemberId();
   const isSecretHidden =
     comment.isSecret &&
     !(
       myId != null &&
-      (myId === comment.writerId || myId === postWriterId)
+      (myId === comment.writerId ||
+        myId === postWriterId ||
+        myId === parentWriterId)
     );
 
   useEffect(() => {
@@ -1344,6 +1350,7 @@ function CommentRow({
               key={reply.commentId}
               comment={reply}
               postWriterId={postWriterId}
+              parentWriterId={comment.writerId}
               isReply
               onDelete={onDelete}
               onUpdate={onUpdate}
