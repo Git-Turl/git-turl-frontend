@@ -347,7 +347,7 @@ export function VoiceInterviewFeedback() {
                   <div className="flex gap-6">
                     {/* Keywords */}
                     <div className="flex-1 p-5 bg-sky-50 rounded-lg border border-sky-200">
-                      <h3 className="text-sm text-gray-700 font-medium mb-3">키워드</h3>
+                      <h3 className="text-sm text-gray-700 font-bold mb-3">키워드</h3>
                       <div className="flex items-center flex-wrap gap-2">
                         {answer.keywords.map((keyword, idx) => (
                           <span
@@ -362,7 +362,7 @@ export function VoiceInterviewFeedback() {
 
                     {/* My Answer (요약) */}
                     <div className="flex-1 p-5 bg-sky-50 rounded-lg border border-sky-200">
-                      <h3 className="text-sm text-gray-700 font-medium mb-3">내 답변 요약</h3>
+                      <h3 className="text-sm text-gray-700 font-bold mb-3">내 답변 요약</h3>
                       <p className="text-sm text-gray-800 leading-relaxed">{answer.answerSummary}</p>
                     </div>
                   </div>
@@ -371,13 +371,13 @@ export function VoiceInterviewFeedback() {
                   <div className="flex gap-6">
                     {/* Full STT Text */}
                     <div className="flex-1 p-5 bg-sky-50 rounded-lg border border-sky-200">
-                      <h3 className="text-sm text-gray-700 font-medium mb-3">내 답변 (전체 텍스트)</h3>
+                      <h3 className="text-sm text-gray-700 font-bold mb-3">내 답변 (전체 텍스트)</h3>
                       <p className="text-sm text-gray-800 leading-relaxed">{answer.content}</p>
                     </div>
 
                     {/* AI Feedback */}
                     <div className="flex-1 p-5 bg-sky-50 rounded-lg border border-sky-200">
-                      <h3 className="text-sm text-gray-700 font-medium mb-3">AI 피드백</h3>
+                      <h3 className="text-sm text-gray-700 font-bold mb-3">AI 피드백</h3>
                       <p className="text-sm text-gray-800 leading-relaxed">{answer.feedback}</p>
                     </div>
                   </div>
