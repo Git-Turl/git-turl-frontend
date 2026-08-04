@@ -47,7 +47,7 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave, onImage
     '모바일': ['React Native', 'Flutter', 'Swift', 'Kotlin', 'Xamarin'],
     '데이터베이스': ['MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Oracle', 'SQLite'],
     'DevOps/인프라': ['Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP', 'Jenkins', 'GitHub Actions'],
-    '기타': ['Git', 'RESTful API', 'GraphQL', 'WebSocket', 'Microservices'],
+    '기타': ['Git', 'RESTful API', 'GraphQL'],
   };
 
   if (!isOpen) return null;
