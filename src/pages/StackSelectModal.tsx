@@ -50,17 +50,7 @@ const stackData = {
     ],
   },
   AI: {
-    AI: [
-      'TensorFlow',
-      'PyTorch',
-      'scikit-learn',
-      'Keras',
-      'Hugging Face',
-      'LangChain',
-      'OpenAI API',
-      'NumPy',
-      'Pandas',
-    ],
+    기타: ['Git', 'RESTful API', 'GraphQL'],
   },
 };
 
