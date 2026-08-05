@@ -24,7 +24,8 @@ import defaultProfile from '../../assets/img/img_profile.svg';
 const JOB_LABEL: Record<JobType, string> = {
   FRONTEND: '프론트엔드',
   BACKEND: '백엔드',
-  AI: 'AI',
+  AI : 'AI',
+  ETC : '기타'
 };
 
 // "2026-04-08T01:40:00" → "2026.04.08"

@@ -261,7 +261,7 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave, onImage
               <div>
                 <label className="block mb-2 text-gray-700">희망분야</label>
                 <div className="flex gap-3">
-                  {['frontend', 'backend', 'AI'].map((stack) => (
+                  {['frontend', 'backend', 'etc'].map((stack) => (
                     <button
                       key={stack}
                       onClick={() => setTechStack(stack)}
@@ -275,7 +275,7 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave, onImage
                         ? '프론트엔드'
                         : stack === 'backend'
                         ? '백엔드'
-                        : 'AI'}
+                        : '기타'}
                     </button>
                   ))}
                 </div>

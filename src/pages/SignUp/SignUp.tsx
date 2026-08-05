@@ -131,7 +131,7 @@ export function SignUp() {
     setSelectedStacks(stacks);
   };
 
-  const fields = ['프론트', '백엔드', 'AI'];
+  const fields = ['프론트', '백엔드', '기타'];
 
   return (
     <div
