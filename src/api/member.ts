@@ -2,7 +2,7 @@ import client from './client';
 import type { ApiResponse } from './types';
 
 // ========== 타입 정의 ==========
-export type JobType = 'FRONTEND' | 'BACKEND' | 'AI' | 'ETC';
+export type JobType = 'FRONTEND' | 'BACKEND' | 'ETC';
 
 export type TechStack =
   | 'PHP'
