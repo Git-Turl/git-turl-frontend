@@ -2,7 +2,7 @@ import client from './client';
 import type { ApiResponse } from './types';
 
 // ========== 타입 정의 ==========
-export type JobType = 'FRONTEND' | 'BACKEND' | 'AI';
+export type JobType = 'FRONTEND' | 'BACKEND' | 'AI' | 'ETC';
 
 export type TechStack =
   | 'PHP'
@@ -46,8 +46,7 @@ export type TechStack =
   | 'GITHUB_ACTIONS'
   | 'GIT'
   | 'RESTFUL_API'
-  | 'GRAPHQL'
-  | 'ETC';
+  | 'GRAPHQL';
 
 // 온보딩용 요청 타입 (필수 필드)
 export type OnboardingRequest = {
