@@ -8,7 +8,8 @@ export const fieldToJobType = (field: string | null): JobType | null => {
     frontend: 'FRONTEND',
     백엔드: 'BACKEND',
     backend: 'BACKEND',
-    AI: 'AI',
+    기타: 'ETC',
+    etc: 'ETC',
   };
   return map[field] || null;
 };
@@ -70,11 +71,18 @@ const ENUM_TO_DISPLAY: Partial<Record<TechStack, string>> = Object.fromEntries(
   Object.entries(DISPLAY_TO_ENUM).map(([display, enumVal]) => [enumVal, display])
 ) as Partial<Record<TechStack, string>>;
 
-export const stackToEnum = (stack: string): TechStack =>
-  DISPLAY_TO_ENUM[stack] || 'ETC';
+// 백엔드 TechStack enum 에 없는 표시명은 undefined — 전송 목록에서 제외됨.
+export const stackToEnum = (stack: string): TechStack | undefined =>
+  DISPLAY_TO_ENUM[stack];
 
 export const stacksToEnumList = (stacks: string[]): TechStack[] =>
-  Array.from(new Set(stacks.map(stackToEnum)));
+  Array.from(
+    new Set(
+      stacks
+        .map(stackToEnum)
+        .filter((v): v is TechStack => v !== undefined)
+    )
+  );
 
 export const enumToStack = (enumVal: TechStack): string =>
   ENUM_TO_DISPLAY[enumVal] ?? enumVal;

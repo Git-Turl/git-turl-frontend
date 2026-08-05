@@ -25,14 +25,7 @@ const stackData = {
       'Angular',
       'jQuery',
     ],
-    모바일: [
-      'React Native',
-      'Flutter',
-      'Xamarin',
-      'Swift',
-      'Kotlin',
-      'Android',
-    ],
+    모바일: ['React Native', 'Flutter', 'Swift', 'Kotlin', 'Xamarin'],
   },
   백엔드: {
     백엔드: [
@@ -48,13 +41,23 @@ const stackData = {
       'Go',
       'Rust',
     ],
+    데이터베이스: ['MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Oracle', 'SQLite'],
   },
-  AI: {
+  기타: {
+    'DevOps/인프라': [
+      'Docker',
+      'Kubernetes',
+      'AWS',
+      'Azure',
+      'GCP',
+      'Jenkins',
+      'GitHub Actions',
+    ],
     기타: ['Git', 'RESTful API', 'GraphQL'],
   },
 };
 
-type FieldType = '프론트' | '백엔드' | 'AI';
+type FieldType = '프론트' | '백엔드' | '기타';
 
 export function StackSelectModal({ isOpen, onClose, onSave }: Props) {
   const [activeTab, setActiveTab] = useState<FieldType>('프론트');
@@ -169,7 +172,7 @@ export function StackSelectModal({ isOpen, onClose, onSave }: Props) {
           </div>
 
           <div style={{ display: 'flex' }}>
-            {(['프론트', '백엔드', 'AI'] as FieldType[]).map((tab) => {
+            {(['프론트', '백엔드', '기타'] as FieldType[]).map((tab) => {
               const isActive = activeTab === tab;
               return (
                 <button
@@ -276,6 +279,9 @@ export function StackSelectModal({ isOpen, onClose, onSave }: Props) {
                             fontSize: 18,
                             fontFamily: 'Inter',
                             fontWeight: 500,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                           }}
                         >
                           {stack}
