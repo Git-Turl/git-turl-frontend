@@ -262,7 +262,7 @@ export function SignUp() {
                 type="text"
                 value={nickname}
                 onChange={(e) => {
-                  setNickname(e.target.value);
+                  setNickname(e.target.value.slice(0, 20));
                   setNicknameCheck(null);
                 }}
                 placeholder="입력해주세요"

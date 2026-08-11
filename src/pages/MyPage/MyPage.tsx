@@ -135,7 +135,7 @@ export function MyPage() {
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
         {/* 페이지 제목 */}
-        <h1 className="text-3xl mb-8 text-gray-900">My Page</h1>
+        <h1 className="text-3xl mb-8 text-gray-900">마이페이지</h1>
 
         {/* 그리드 레이아웃 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

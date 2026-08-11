@@ -15,13 +15,13 @@ export function GitHubCard({ githubUrl, username }: GitHubCardProps) {
             <GitBranch className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-sm text-gray-500 mb-1">GitHub Profile</h3>
+            <h3 className="text-sm text-gray-500 mb-1">GitHub 프로필</h3>
             <p className="text-gray-900">@{username}</p>
           </div>
         </div>
         <button
           className="p-2 hover:bg-sky-50 rounded-lg transition-colors"
-          aria-label="Open GitHub profile"
+          aria-label="GitHub 프로필 열기"
         >
           <ExternalLink className="w-4 h-4 text-sky-500" />
         </button>

@@ -53,11 +53,11 @@ export function AppSidebar({
   };
 
   const navItems = [
-    { id: 'home', icon: Home, label: 'Home', path: '/home' },
-    { id: 'analytics', icon: BarChart3, label: 'Analytics', path: '/analytics' },
-    { id: 'interview', icon: MessageSquare, label: 'Interview', path: '/interview', hasPopup: true },
-    { id: 'community', icon: Users, label: 'Community', path: '/community' },
-    { id: 'notifications', icon: Bell, label: 'Notifications', path: '/notifications', isDrawer: true },
+    { id: 'home', icon: Home, label: '홈', path: '/home' },
+    { id: 'analytics', icon: BarChart3, label: '분석', path: '/analytics' },
+    { id: 'interview', icon: MessageSquare, label: '면접', path: '/interview', hasPopup: true },
+    { id: 'community', icon: Users, label: '커뮤니티', path: '/community' },
+    { id: 'notifications', icon: Bell, label: '알림', path: '/notifications', isDrawer: true },
   ];
 
   const isActive = (path: string) => {
