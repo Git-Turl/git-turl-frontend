@@ -589,7 +589,9 @@ export function InterviewDetail() {
                             <div className="bg-white border border-sky-200 rounded-lg p-4 space-y-3">
                               <textarea
                                 value={answerInput}
-                                onChange={(e) => setAnswerInput(e.target.value)}
+                                onChange={(e) =>
+                                  setAnswerInput(e.target.value.slice(0, 200))
+                                }
                                 maxLength={200}
                                 placeholder="답변을 입력하세요 (최대 200자)"
                                 className="w-full p-3 border border-sky-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white text-sm"
@@ -597,7 +599,13 @@ export function InterviewDetail() {
                                 autoFocus
                               />
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-500">
+                                <span
+                                  className={`text-xs ${
+                                    answerInput.length >= 200
+                                      ? 'text-red-500 font-medium'
+                                      : 'text-gray-500'
+                                  }`}
+                                >
                                   {answerInput.length} / 200
                                 </span>
                                 <div className="flex gap-2">
