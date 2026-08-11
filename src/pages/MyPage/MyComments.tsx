@@ -77,7 +77,7 @@ export function MyComments() {
             to="/mypage"
             className="text-sky-600 hover:text-sky-700 hover:underline transition-colors"
           >
-            My Page
+            마이페이지
           </Link>
           <ChevronRight className="w-4 h-4 text-gray-400" />
           <span className="text-gray-600">내가 쓴 댓글</span>

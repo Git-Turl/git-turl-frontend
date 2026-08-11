@@ -206,7 +206,7 @@ export function OtherProfile() {
                 >
                   <FileText className="w-5 h-5 text-sky-600" />
                   <span className="text-gray-700">
-                    Posts{' '}
+                    게시글{' '}
                     <span className="text-sky-600">({myBoards.length})</span>
                   </span>
                 </Link>
@@ -216,7 +216,7 @@ export function OtherProfile() {
                 >
                   <MessageCircle className="w-5 h-5 text-sky-600" />
                   <span className="text-gray-700">
-                    Comments{' '}
+                    댓글{' '}
                     <span className="text-sky-600">({myComments.length})</span>
                   </span>
                 </Link>
@@ -248,7 +248,7 @@ export function OtherProfile() {
             <Card className="p-6 bg-white shadow-sm border border-sky-100">
               <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-sky-600" />
-                Recent Posts
+                최근 게시글
               </h3>
               {myBoards.length > 0 ? (
                 <ul className="space-y-2">
@@ -290,7 +290,7 @@ export function OtherProfile() {
             <Card className="p-6 bg-white shadow-sm border border-sky-100">
               <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-sky-600" />
-                Recent Comments
+                최근 댓글
               </h3>
               {myComments.length > 0 ? (
                 <ul className="space-y-2">

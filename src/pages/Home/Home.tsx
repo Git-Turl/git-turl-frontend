@@ -324,7 +324,7 @@ export function Home() {
           {githubUsername ? (
             <img
               src={`https://github-profile-summary-cards.vercel.app/api/cards/profile-details?username=${githubUsername}&theme=buefy`}
-              alt="GitHub Profile"
+              alt="GitHub 프로필"
               style={{
                 width: '100%',
                 height: '100%',
