@@ -53,11 +53,8 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave, onImage
   if (!isOpen) return null;
 
   const handleNicknameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value.length <= 10) {
-      setNickname(value);
-      setNicknameStatus('idle');
-    }
+    setNickname(e.target.value.slice(0, 20));
+    setNicknameStatus('idle');
   };
 
   const handleCheckNickname = async () => {
@@ -222,7 +219,7 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave, onImage
               {/* 닉네임 입력 */}
               <div>
                 <label className="block mb-2 text-gray-700">
-                  닉네임 <span className="text-xs text-gray-500">(최대 10글자)</span>
+                  닉네임 <span className="text-xs text-gray-500">(최대 20글자)</span>
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -230,7 +227,7 @@ export function SettingsModal({ isOpen, onClose, currentProfile, onSave, onImage
                     value={nickname}
                     onChange={handleNicknameChange}
                     placeholder="닉네임을 입력해주세요"
-                    maxLength={10}
+                    maxLength={20}
                     className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                   />
                   <button

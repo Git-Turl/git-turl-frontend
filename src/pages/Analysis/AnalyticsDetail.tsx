@@ -244,7 +244,7 @@ export function AnalyticsDetail() {
                   <input
                     type="text"
                     value={titleInput}
-                    onChange={(e) => setTitleInput(e.target.value)}
+                    onChange={(e) => setTitleInput(e.target.value.slice(0, 100))}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleSaveTitle();
                       if (e.key === 'Escape') handleEditTitleCancel();
