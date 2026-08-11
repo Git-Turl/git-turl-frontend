@@ -104,10 +104,10 @@ export function OtherPosts() {
             {nickname || '프로필'}
           </Link>
           <ChevronRight className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-600">Posts</span>
+          <span className="text-gray-600">게시글</span>
         </div>
 
-        <h1 className="text-3xl mb-8 text-gray-900">Posts</h1>
+        <h1 className="text-3xl mb-8 text-gray-900">게시글</h1>
 
         {boards.length === 0 ? (
           <div className="text-center py-12 text-gray-500">

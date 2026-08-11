@@ -90,13 +90,13 @@ export function SummaryCarousel({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg text-gray-900">Public Summary</h3>
+        <h3 className="text-lg text-gray-900">공개 요약본</h3>
         <div className="flex items-center gap-2">
           <button
             onClick={prevPage}
             disabled={totalPages <= 1}
             className="p-2 rounded-lg hover:bg-sky-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Previous page"
+            aria-label="이전 페이지"
           >
             <ChevronLeft className="w-5 h-5 text-sky-600" />
           </button>
@@ -104,7 +104,7 @@ export function SummaryCarousel({
             onClick={nextPage}
             disabled={totalPages <= 1}
             className="p-2 rounded-lg hover:bg-sky-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Next page"
+            aria-label="다음 페이지"
           >
             <ChevronRight className="w-5 h-5 text-sky-600" />
           </button>

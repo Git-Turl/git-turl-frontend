@@ -234,7 +234,7 @@ export function VoiceInterviewFeedback() {
                           {item.answer ? (
                             <div className="flex items-center gap-2 mt-2 text-xs text-emerald-300">
                               <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-                              <span>Answered</span>
+                              <span>답변 완료</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">

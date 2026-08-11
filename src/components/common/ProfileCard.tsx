@@ -79,7 +79,7 @@ export function ProfileCard({
           <button
             onClick={() => setIsSettingsOpen(true)}
             className="p-2 hover:bg-sky-50 rounded-lg transition-colors"
-            aria-label="Edit profile"
+            aria-label="프로필 수정"
           >
             <Pencil className="w-4 h-4 text-sky-500" />
           </button>
@@ -123,7 +123,7 @@ export function ProfileCard({
             className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-sky-50 transition-colors text-left"
           >
             <FileText className="w-5 h-5 text-sky-600" />
-            <span className="text-gray-700">My Posts</span>
+            <span className="text-gray-700">내가 쓴 글</span>
           </Link>
           
           <Link
@@ -131,7 +131,7 @@ export function ProfileCard({
             className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-sky-50 transition-colors text-left"
           >
             <MessageCircle className="w-5 h-5 text-sky-600" />
-            <span className="text-gray-700">My Comments</span>
+            <span className="text-gray-700">내가 쓴 댓글</span>
           </Link>
         </nav>
       </Card>

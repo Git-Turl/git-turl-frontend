@@ -98,10 +98,10 @@ export function OtherComments() {
             {nickname || '프로필'}
           </Link>
           <ChevronRight className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-600">Comments</span>
+          <span className="text-gray-600">댓글</span>
         </div>
 
-        <h1 className="text-3xl mb-8 text-gray-900">Comments</h1>
+        <h1 className="text-3xl mb-8 text-gray-900">댓글</h1>
 
         {comments.length === 0 ? (
           <div className="text-center py-12 text-gray-500">

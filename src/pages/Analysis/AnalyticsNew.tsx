@@ -126,7 +126,7 @@ export function AnalyticsNew() {
                             ? 'bg-sky-100 text-sky-700'
                             : 'bg-gray-100 text-gray-600'
                           }`}>
-                          {repo.private ? 'Private' : 'Public'}
+                          {repo.private ? '비공개' : '공개'}
                         </span>
                       </div>
                     </div>
