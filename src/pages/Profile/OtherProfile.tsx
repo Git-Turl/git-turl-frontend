@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
 import { GitHubCard } from '../../components/common/GitHubCard';
 import { SummaryCarousel } from '../../components/common/SummaryCarousel';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   getMemberBoards,
   getMemberComments,
@@ -142,8 +143,30 @@ export function OtherProfile() {
   if (loading) {
     return (
       <div className="p-8">
-        <div className="max-w-6xl mx-auto text-center py-12 text-gray-500">
-          로딩 중...
+        <div className="max-w-6xl mx-auto">
+          <Skeleton className="h-9 w-56 mb-8" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-4">
+              <div className="p-6 bg-white shadow-sm border border-sky-100 rounded-xl">
+                <div className="flex flex-col items-center">
+                  <Skeleton className="h-24 w-24 rounded-full" />
+                  <Skeleton className="h-5 w-32 mt-4" />
+                  <Skeleton className="h-4 w-24 mt-2" />
+                  <div className="flex gap-2 mt-4">
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="lg:col-span-2 space-y-6">
+              <Skeleton className="h-40 w-full rounded-xl" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Skeleton className="h-44 w-full rounded-xl" />
+                <Skeleton className="h-44 w-full rounded-xl" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );

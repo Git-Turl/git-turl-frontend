@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { ChevronRight, FileDown, Pencil, Check, X, Star, Trash2 } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   getReportDetail,
   getMyProfile,
@@ -206,8 +207,26 @@ export function AnalyticsDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-8 bg-[#F0F9FF] flex items-center justify-center">
-        <div className="text-gray-500">분석본을 불러오는 중...</div>
+      <div className="min-h-screen p-8 bg-[#F0F9FF]">
+        <div className="max-w-6xl mx-auto">
+          <Skeleton className="h-4 w-48 mb-8" />
+          <Card className="p-8 bg-white border border-sky-100 shadow-sm">
+            <div className="flex items-start justify-between mb-6">
+              <Skeleton className="h-8 w-1/2" />
+              <Skeleton className="h-9 w-24" />
+            </div>
+            <div className="space-y-3 mb-8">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
+            <div className="space-y-4">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          </Card>
+        </div>
       </div>
     );
   }

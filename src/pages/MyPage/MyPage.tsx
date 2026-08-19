@@ -12,6 +12,7 @@ import {
   type ReportListItem,
 } from '../../api/member';
 import { enumListToStacks } from '../../utils/stackMapping';
+import { Skeleton } from '../../components/ui/skeleton';
 import defaultProfile from '../../assets/img/img_profile.svg';
 
 export function MyPage() {
@@ -107,8 +108,39 @@ export function MyPage() {
     return (
       <div className="p-8">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center py-12">
-            <div className="text-gray-500">로딩 중...</div>
+          <Skeleton className="h-9 w-40 mb-8" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* 왼쪽 컬럼 - 프로필 + 히스토리 */}
+            <div className="lg:col-span-1 space-y-4">
+              <div className="p-6 bg-white shadow-sm border border-sky-100 rounded-xl">
+                <div className="flex flex-col items-center">
+                  <Skeleton className="h-24 w-24 rounded-full" />
+                  <Skeleton className="h-5 w-32 mt-4" />
+                  <Skeleton className="h-4 w-24 mt-2" />
+                  <div className="flex gap-2 mt-4">
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 bg-white shadow-sm border border-sky-100 rounded-xl">
+                <Skeleton className="h-5 w-28 mb-4" />
+                <div className="grid grid-cols-3 gap-3">
+                  <Skeleton className="h-14 w-full" />
+                  <Skeleton className="h-14 w-full" />
+                  <Skeleton className="h-14 w-full" />
+                </div>
+              </div>
+            </div>
+
+            {/* 오른쪽 컬럼 - GitHub & Summaries */}
+            <div className="lg:col-span-2 space-y-6">
+              <Skeleton className="h-40 w-full rounded-xl" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Skeleton className="h-44 w-full rounded-xl" />
+                <Skeleton className="h-44 w-full rounded-xl" />
+              </div>
+            </div>
           </div>
         </div>
       </div>

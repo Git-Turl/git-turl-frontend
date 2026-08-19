@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Plus, Calendar, Mic, Trash2 } from 'lucide-react';
 import { Card } from '../../components/ui/card';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   getAllVoiceQuestions,
   getVoiceAnswer,
@@ -206,9 +207,22 @@ export function VoiceInterview() {
 
             {/* 로딩 / 에러 / 빈 상태 / 내역 카드 */}
             {loading ? (
-              <div className="col-span-full text-center py-12 text-gray-500">
-                불러오는 중...
-              </div>
+              Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-48 p-5 border border-sky-100 rounded-lg flex flex-col"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <Skeleton className="h-5 w-1/2" />
+                    <Skeleton className="h-6 w-10" />
+                  </div>
+                  <Skeleton className="h-4 w-2/3 mb-auto" />
+                  <div className="flex items-center justify-between mt-4">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-6 w-6 rounded" />
+                  </div>
+                </div>
+              ))
             ) : error ? (
               <div className="col-span-full text-center py-12 text-red-500">
                 {error}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Plus, Calendar, MessageSquare } from 'lucide-react';
 import { Card } from '../../components/ui/card';
+import { Skeleton } from '../../components/ui/skeleton';
 import { getReportList, getQuestions, type ReportListItem } from '../../api/member';
 
 export function Interview() {
@@ -148,9 +149,20 @@ export function Interview() {
 
             {/* 기존 면접 카드 */}
             {loading ? (
-              <div className="col-span-full flex items-center justify-center py-12">
-                <div className="text-gray-500">면접 질문 목록을 불러오는 중...</div>
-              </div>
+              Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-48 p-5 border border-sky-100 rounded-lg flex flex-col"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <Skeleton className="h-5 w-1/2" />
+                    <Skeleton className="h-6 w-10" />
+                  </div>
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-2/3 mb-auto" />
+                  <Skeleton className="h-3 w-24 mt-4" />
+                </div>
+              ))
             ) : reports.length === 0 ? (
               <div className="col-span-full text-center py-12 text-gray-500">
                 {filterMode === 'date'
