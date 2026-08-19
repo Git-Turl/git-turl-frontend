@@ -31,6 +31,7 @@ import {
 } from '../../api/community';
 import { getRecruitStatus } from '../../utils/localBoardStatus';
 import { AuthorLink, getMyMemberId } from '../../components/common/AuthorLink';
+import { Skeleton } from '../../components/ui/skeleton';
 import defaultProfile from '../../assets/img/img_profile.svg';
 import '../../components/RichTextEditor/editor.css';
 
@@ -272,9 +273,58 @@ export function CommunityDetail() {
   // 로딩/에러 처리
   if (postLoading) {
     return (
-      <CenterMessage onBack={() => navigate('/community')}>
-        불러오는 중...
-      </CenterMessage>
+      <div
+        style={{
+          padding: '24px 32px',
+          background: '#F0F9FF',
+          minHeight: '100vh',
+          boxSizing: 'border-box',
+        }}
+      >
+        <button
+          onClick={() => navigate('/community')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '6px 10px 6px 6px',
+            marginBottom: 14,
+            background: 'transparent',
+            border: 'none',
+            color: '#4A5565',
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: 'pointer',
+            borderRadius: 8,
+          }}
+        >
+          <ChevronLeft size={18} />
+          돌아가기
+        </button>
+        <div
+          style={{
+            background: 'white',
+            borderRadius: 16,
+            padding: '32px',
+            border: '1px solid #DFF2FE',
+          }}
+        >
+          <Skeleton className="h-8 w-3/4 mb-4" />
+          <div className="flex items-center gap-3 mb-6">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        </div>
+      </div>
     );
   }
 
