@@ -28,6 +28,7 @@ import {
   getRecommendProjects,
   type RecommendItem,
 } from '../../api/home';
+import { Skeleton } from '../../components/ui/skeleton';
 import gitturlLogo from '../../assets/logo/gitturl-logo.svg';
 
 // "2026-04-08T01:40:00" → "4시간 전" 형식 상대시각.
@@ -108,33 +109,34 @@ export function Home() {
   const [recentBoards, setRecentBoards] = useState<MemberBoardItem[]>([]);
   const [recentComments, setRecentComments] = useState<MemberCommentItem[]>([]);
   const [recommendCards, setRecommendCards] = useState<RecommendItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
 
-    getMyHistory()
+    const historyPromise = getMyHistory()
       .then((res) => {
         if (cancelled) return;
         if (res.isSuccess && res.result) setHistory(res.result);
       })
       .catch((err) => console.error('[home] history load failed', err));
 
-    getReportList({ answerType: 'ALL', pageSize: 5 })
+    const reportsPromise = getReportList({ answerType: 'ALL', pageSize: 5 })
       .then((res) => {
         if (cancelled) return;
         if (res.isSuccess && res.result?.data) setRecentReports(res.result.data);
       })
       .catch((err) => console.error('[home] reports load failed', err));
 
-    getMyBoards({ sort: 'latest', page: 0, size: 5 })
+    const boardsPromise = getMyBoards({ sort: 'latest', page: 0, size: 5 })
       .then((res) => {
         if (cancelled) return;
         if (res.isSuccess && res.result?.boardList) setRecentBoards(res.result.boardList);
       })
       .catch((err) => console.error('[home] my boards load failed', err));
 
-    getMyComments({ sort: 'latest', page: 0, size: 5 })
+    const commentsPromise = getMyComments({ sort: 'latest', page: 0, size: 5 })
       .then((res) => {
         if (cancelled) return;
         if (res.isSuccess && res.result?.commentList) {
@@ -144,13 +146,23 @@ export function Home() {
       .catch((err) => console.error('[home] my comments load failed', err));
 
     // 프로젝트 추천 — result 가 배열로 바로 옴. 백엔드가 추천 알고리즘으로 정렬해서 주므로 그대로 사용.
-    getRecommendProjects()
+    const recommendPromise = getRecommendProjects()
       .then((res) => {
         if (cancelled) return;
         const items = res.result ?? [];
         setRecommendCards(items.slice(0, 3));
       })
       .catch((err) => console.error('[home] recommend load failed', err));
+
+    Promise.allSettled([
+      historyPromise,
+      reportsPromise,
+      boardsPromise,
+      commentsPromise,
+      recommendPromise,
+    ]).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
 
     return () => {
       cancelled = true;
@@ -430,7 +442,7 @@ export function Home() {
                 fontWeight: 600,
               }}
             >
-              23회
+              {history?.weeklyCommitCount ?? 0}회
             </div>
           </div>
         </div>
@@ -475,7 +487,34 @@ export function Home() {
       </div>
 
       <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
-        {recommendedProjects.length === 0 && (
+        {loading &&
+          Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                flex: 1,
+                background: 'white',
+                borderRadius: 16,
+                border: '1px solid #B8E6FE',
+                padding: 16,
+                minWidth: 0,
+                boxSizing: 'border-box',
+              }}
+            >
+              <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                <Skeleton className="h-[60px] w-[60px] rounded-2xl shrink-0" />
+                <div style={{ flex: 1 }}>
+                  <Skeleton className="h-5 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <Skeleton className="h-6 w-14 rounded-lg" />
+                <Skeleton className="h-6 w-14 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        {!loading && recommendedProjects.length === 0 && (
           <div
             style={{
               flex: 1,
@@ -491,7 +530,8 @@ export function Home() {
             추천 항목이 없어요.
           </div>
         )}
-        {recommendedProjects.map((project) => {
+        {!loading &&
+          recommendedProjects.map((project) => {
           const Icon = project.icon;
           return (
             <div
@@ -762,7 +802,22 @@ export function Home() {
               </Link>
             </div>
 
-            {recentActivities.length === 0 ? (
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    style={{ display: 'flex', gap: 10, alignItems: 'center' }}
+                  >
+                    <Skeleton className="h-9 w-9 rounded-[10px] shrink-0" />
+                    <div style={{ flex: 1 }}>
+                      <Skeleton className="h-4 w-4/5 mb-1.5" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : recentActivities.length === 0 ? (
               <div
                 style={{
                   padding: '24px 0',
