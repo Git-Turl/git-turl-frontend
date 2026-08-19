@@ -1,6 +1,20 @@
 
+@import 'pretendard/dist/web/variable/pretendardvariable.css';
 @import './styles/tailwind.css';
 @import './styles/theme.css';
+
+body {
+  font-family:
+    'Pretendard Variable',
+    Pretendard,
+    -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    Roboto,
+    'Apple SD Gothic Neo',
+    'Malgun Gothic',
+    sans-serif;
+}
 
 @media print {
   main {
