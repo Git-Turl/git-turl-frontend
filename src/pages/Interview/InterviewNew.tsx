@@ -3,11 +3,16 @@ import { useNavigate } from 'react-router';
 import { ArrowLeft, Check, FileText } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   getReportList,
   createQuestions,
   type ReportListItem,
 } from '../../api/member';
+import {
+  getCachedReportCount,
+  setCachedReportCount,
+} from '../../utils/reportCountCache';
 
 export function InterviewNew() {
   const navigate = useNavigate();
@@ -35,6 +40,10 @@ export function InterviewNew() {
         const response = await getReportList(params);
         if (response.isSuccess && response.result) {
           setReports(response.result.data);
+          // 다음 방문 스켈레톤 개수용 — 전체(all) 목록일 때만 캐시 (날짜 필터는 개수가 달라짐).
+          if (filterMode === 'all') {
+            setCachedReportCount(response.result.data.length);
+          }
         }
       } catch (error) {
         console.error('요약본 목록 조회 실패:', error);
@@ -179,9 +188,21 @@ export function InterviewNew() {
             {/* 요약본 그리드 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               {loading ? (
-                <div className="col-span-full flex items-center justify-center py-12">
-                  <div className="text-gray-500">요약본 목록을 불러오는 중...</div>
-                </div>
+                Array.from({ length: getCachedReportCount() }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="p-5 border-2 border-gray-200 rounded-xl"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Skeleton className="h-8 w-8 rounded" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                  </div>
+                ))
               ) : reports.length === 0 ? (
                 <div className="col-span-full flex items-center justify-center py-12">
                   <div className="text-gray-500">

@@ -154,6 +154,8 @@ export type Content = {
     reports: string;
     features: Features;
     improvements: Improvements;
+    // 데이터가 적어 분석 정확도가 낮을 수 있는 경우(커밋 수 부족, README 없음, 이메일 미확인 등) 백엔드가 내려주는 개별 경고 메시지.
+    warnings?: string[] | null;
   };
 };
 

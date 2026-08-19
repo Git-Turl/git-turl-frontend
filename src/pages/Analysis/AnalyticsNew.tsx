@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { ArrowLeft, Check, GitBranch } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Skeleton } from '../../components/ui/skeleton';
 import { getRepositories, createReport } from '../../api/member';
 
 export function AnalyticsNew() {
@@ -53,8 +54,21 @@ export function AnalyticsNew() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-8 bg-[#F0F9FF] flex items-center justify-center">
-        <div className="text-gray-500">레포지토리 목록을 불러오는 중...</div>
+      <div className="min-h-screen p-8 bg-[#F0F9FF]">
+        <div className="max-w-5xl mx-auto">
+          <div className="mb-8">
+            <Skeleton className="h-9 w-24 mb-2" />
+            <Skeleton className="h-5 w-40" />
+          </div>
+          <Card className="p-6 bg-white border border-sky-100">
+            <Skeleton className="h-6 w-40 mb-6" />
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-lg" />
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
     );
   }

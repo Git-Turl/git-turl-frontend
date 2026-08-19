@@ -23,6 +23,7 @@ import {
 } from '../../api/community';
 import { getRecruitStatus } from '../../utils/localBoardStatus';
 import { AuthorLink } from '../../components/common/AuthorLink';
+import { Skeleton } from '../../components/ui/skeleton';
 
 // 필터 옵션 정의 (label = 한글 표시, value = 백엔드 enum)
 type Option<T extends string> = { label: string; value: T };
@@ -394,15 +395,29 @@ export function CommunityList() {
 
         <div>
           {loading ? (
-            <div
-              style={{
-                padding: '60px 0',
-                textAlign: 'center',
-                color: '#828282',
-                fontSize: 14,
-              }}
-            >
-              불러오는 중...
+            <div>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    gap: 20,
+                    padding: '20px 0',
+                    borderBottom: i === 5 ? 'none' : '1px solid #E5E7EB',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Skeleton className="h-5 w-1/2 mb-2" />
+                    <Skeleton className="h-4 w-4/5 mb-3" />
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-12" />
+                      <Skeleton className="h-4 w-12" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : error ? (
             <div

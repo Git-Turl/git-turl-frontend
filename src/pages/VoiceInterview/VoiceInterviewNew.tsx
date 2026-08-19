@@ -3,12 +3,17 @@ import { useNavigate } from 'react-router';
 import { ArrowLeft, Check, FileText, FilePlus, Plus } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   getVoiceReports,
   generateQuestions,
   type ReportSummary,
 } from '../../api/voiceInterview';
 import { useVoiceRecordingStore } from '../../store/voiceRecordingStore';
+import {
+  getCachedReportCount,
+  setCachedReportCount,
+} from '../../utils/reportCountCache';
 
 // 확인용 모크 요약본 — 실제 목록이 비었거나 조회 실패(미로그인 등) 시 폴백
 const MOCK_REPORT: ReportSummary = {
@@ -40,7 +45,11 @@ export function VoiceInterviewNew() {
       }),
     };
     getVoiceReports(params)
-      .then((list) => setReports(list))
+      .then((list) => {
+        setReports(list);
+        // 다음 방문 스켈레톤 개수용 — 전체(all) 목록일 때만 캐시 (날짜 필터는 개수가 달라짐).
+        if (filterMode === 'all') setCachedReportCount(list.length);
+      })
       .catch(() => setReports([MOCK_REPORT]))
       .finally(() => setIsLoading(false));
   }, [filterMode, startDate, endDate]);
@@ -183,7 +192,20 @@ export function VoiceInterviewNew() {
 
             {/* 요약본 그리드 리스트 */}
             {isLoading ? (
-              <div className="py-16 text-center text-gray-500">요약본을 불러오는 중...</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {Array.from({ length: getCachedReportCount() }).map((_, i) => (
+                  <div key={i} className="p-5 border-2 border-gray-200 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <Skeleton className="h-5 w-5 rounded mt-1" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : filteredReports.length === 0 ? (
               <div className="py-16 flex flex-col items-center justify-center text-center">
                 <div className="w-16 h-16 rounded-full bg-sky-100 flex items-center justify-center mb-4">

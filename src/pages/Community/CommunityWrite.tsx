@@ -14,6 +14,7 @@ import {
 } from '../../api/community';
 import { setRecruitStatus } from '../../utils/localBoardStatus';
 import { RichTextEditor } from '../../components/RichTextEditor/RichTextEditor';
+import { Skeleton } from '../../components/ui/skeleton';
 
 type PostType = 'study' | 'project' | 'free';
 type StudyTag = '어학' | '자격증' | '코딩테스트';
@@ -377,12 +378,30 @@ export function CommunityWrite() {
           minHeight: '100vh',
           background: '#F0F9FF',
           paddingTop: 46,
-          display: 'flex',
-          justifyContent: 'center',
         }}
       >
-        <div style={{ marginTop: 80, color: '#828282', fontSize: 16 }}>
-          게시글을 불러오는 중...
+        <div style={{ width: 1200, margin: '0 auto' }}>
+          <Skeleton className="h-9 w-48 mb-12" />
+          <section
+            style={{
+              width: '100%',
+              background: '#fff',
+              borderRadius: 12,
+              padding: '30px 40px',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div className="flex gap-3 mb-6">
+              <Skeleton className="h-9 w-28" />
+              <Skeleton className="h-9 w-28" />
+            </div>
+            <Skeleton className="h-12 w-full mb-6" />
+            <Skeleton className="h-4 w-full mb-3" />
+            <Skeleton className="h-4 w-full mb-3" />
+            <Skeleton className="h-4 w-full mb-3" />
+            <Skeleton className="h-4 w-2/3 mb-6" />
+            <Skeleton className="h-64 w-full" />
+          </section>
         </div>
       </main>
     );

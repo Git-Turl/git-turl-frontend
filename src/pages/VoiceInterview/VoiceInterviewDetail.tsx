@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { Mic, Square, ChevronRight, Clock, Check, X } from 'lucide-react';
 import { Card } from '../../components/ui/card';
+import { Skeleton } from '../../components/ui/skeleton';
 import { Button } from '../../components/ui/button';
 import {
   getAllVoiceQuestions,
@@ -252,8 +253,28 @@ export function VoiceInterviewDetail() {
     return (
       <div className="min-h-screen p-8 bg-[#F0F9FF]">
         <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl text-gray-900 mb-2">음성 면접</h1>
-          <p className="text-gray-600">질문을 불러오는 중...</p>
+          <div className="mb-8">
+            <h1 className="text-3xl text-gray-900 mb-2">음성 면접</h1>
+          </div>
+          <div className="flex gap-5 items-start">
+            <Card className="p-8 bg-white border border-sky-100 shadow-sm flex-1">
+              <Skeleton className="h-4 w-24 mb-4" />
+              <Skeleton className="h-6 w-full mb-2" />
+              <Skeleton className="h-6 w-3/4 mb-8" />
+              <Skeleton className="h-40 w-full rounded-lg" />
+              <div className="flex justify-center mt-8">
+                <Skeleton className="h-16 w-16 rounded-full" />
+              </div>
+            </Card>
+            <Card className="p-6 bg-white border border-sky-100 shadow-sm w-64 hidden lg:block">
+              <Skeleton className="h-5 w-24 mb-4" />
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-8 w-full rounded" />
+                ))}
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
     );

@@ -3,6 +3,7 @@ import type { MouseEvent } from 'react';
 import { Plus, Calendar, Star } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { Card } from '../../components/ui/card';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   getReportList,
   updateReportBookmark,
@@ -187,9 +188,17 @@ export function Analytics() {
 
             {/* 기존 분석 카드 */}
             {loading ? (
-              <div className="col-span-full flex items-center justify-center py-12">
-                <div className="text-gray-500">분석본 목록을 불러오는 중...</div>
-              </div>
+              Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-48 p-5 border border-sky-100 rounded-lg flex flex-col"
+                >
+                  <Skeleton className="h-5 w-3/4 mb-3" />
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-2/3 mb-auto" />
+                  <Skeleton className="h-3 w-24 mt-4" />
+                </div>
+              ))
             ) : reports.length === 0 ? (
               <div className="col-span-full flex items-center justify-center py-12">
                 <div className="text-gray-500">분석본이 없습니다. 새 레포지토리 분석을 시작해보세요!</div>

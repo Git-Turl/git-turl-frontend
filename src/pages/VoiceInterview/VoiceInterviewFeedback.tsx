@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { Play, Pause, Check, ArrowLeft, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   getAllVoiceQuestions,
   getVoiceAnswer,
@@ -173,8 +174,29 @@ export function VoiceInterviewFeedback() {
     return (
       <div className="min-h-screen p-8 bg-[#F0F9FF]">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl text-gray-900 mb-2">음성 면접 피드백</h1>
-          <p className="text-gray-600">피드백을 불러오는 중...</p>
+          <div className="mb-8">
+            <h1 className="text-3xl text-gray-900 mb-2">음성 면접 피드백</h1>
+          </div>
+          <div className="flex gap-5 items-start">
+            <div className="flex-1 space-y-5">
+              <div className="p-8 bg-white border border-sky-100 rounded-xl shadow-sm">
+                <Skeleton className="h-6 w-3/4 mb-6" />
+                <Skeleton className="h-32 w-full rounded-lg mb-6" />
+                <Skeleton className="h-5 w-32 mb-3" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
+            <div className="p-6 bg-white border border-sky-100 rounded-xl shadow-sm w-64 hidden lg:block">
+              <Skeleton className="h-5 w-24 mb-4" />
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-8 w-full rounded" />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );

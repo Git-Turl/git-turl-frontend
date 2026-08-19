@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router';
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { Card } from '../../components/ui/card';
+import { Skeleton } from '../../components/ui/skeleton';
 import { Button } from '../../components/ui/button';
 import {
   getReportDetail,
@@ -360,8 +361,28 @@ export function InterviewDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-8 bg-[#F0F9FF] flex items-center justify-center">
-        <div className="text-gray-500">질문 목록을 불러오는 중...</div>
+      <div className="min-h-screen p-8 bg-[#F0F9FF]">
+        <div className="max-w-6xl mx-auto">
+          <Skeleton className="h-4 w-48 mb-8" />
+          <Card className="p-8 bg-white border border-sky-100 shadow-sm">
+            <div className="flex items-start justify-between mb-8">
+              <Skeleton className="h-8 w-1/2" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="p-5 border border-sky-100 rounded-lg space-y-3"
+                >
+                  <Skeleton className="h-5 w-4/5" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
     );
   }

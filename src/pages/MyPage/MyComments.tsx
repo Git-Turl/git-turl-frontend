@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ChevronRight, Heart, Calendar, MessageCircle } from 'lucide-react';
 import { Card } from '../../components/ui/card';
+import { Skeleton } from '../../components/ui/skeleton';
 import { getMyComments, type MemberCommentItem } from '../../api/member';
 
 const formatDate = (iso: string) =>
@@ -51,8 +52,25 @@ export function MyComments() {
   if (loading) {
     return (
       <div className="min-h-screen p-8">
-        <div className="max-w-5xl mx-auto text-center py-12 text-gray-500">
-          로딩 중...
+        <div className="max-w-5xl mx-auto">
+          <Skeleton className="h-4 w-40 mb-8" />
+          <Skeleton className="h-9 w-48 mb-8" />
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="p-6 bg-white border border-sky-100 rounded-xl space-y-3"
+              >
+                <Skeleton className="h-3 w-56" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-12" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { ChevronRight, FileDown, Pencil, Check, X, Star, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileDown, Pencil, Check, X, Star, Trash2, AlertTriangle } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   getReportDetail,
   getMyProfile,
@@ -32,6 +33,8 @@ export function AnalyticsDetail() {
   const [questionCount, setQuestionCount] = useState(3);
   const [answerType, setAnswerType] = useState<'TEXT' | 'VOICE'>('TEXT');
   const [isCreatingQuestions, setIsCreatingQuestions] = useState(false);
+  const [dismissedWarnings, setDismissedWarnings] = useState<Set<number>>(new Set());
+  const [isNoticeOpen, setIsNoticeOpen] = useState(false);
 
   useEffect(() => {
     const fetchReportDetail = async () => {
@@ -206,8 +209,26 @@ export function AnalyticsDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-8 bg-[#F0F9FF] flex items-center justify-center">
-        <div className="text-gray-500">분석본을 불러오는 중...</div>
+      <div className="min-h-screen p-8 bg-[#F0F9FF]">
+        <div className="max-w-6xl mx-auto">
+          <Skeleton className="h-4 w-48 mb-8" />
+          <Card className="p-8 bg-white border border-sky-100 shadow-sm">
+            <div className="flex items-start justify-between mb-6">
+              <Skeleton className="h-8 w-1/2" />
+              <Skeleton className="h-9 w-24" />
+            </div>
+            <div className="space-y-3 mb-8">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
+            <div className="space-y-4">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -236,6 +257,40 @@ export function AnalyticsDetail() {
         </div>
 
         <Card className="p-8 bg-white border border-sky-100 shadow-sm">
+          {/* 개별 경고 — 커밋 수 부족 등 이 리포트에 한정된 데이터 품질 경고 */}
+          {(() => {
+            const visibleWarnings = (analysisData.content?.content.warnings ?? []).filter(
+              (_: string, index: number) => !dismissedWarnings.has(index)
+            );
+            if (visibleWarnings.length === 0) return null;
+
+            return (
+              <div className="flex flex-col gap-2 mb-6 print:hidden">
+                {analysisData.content.content.warnings.map((warning: string, index: number) =>
+                  dismissedWarnings.has(index) ? null : (
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg"
+                    >
+                      <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                      <p className="flex-1 text-sm text-amber-800">{warning}</p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDismissedWarnings((prev) => new Set(prev).add(index))
+                        }
+                        className="shrink-0 text-amber-500 hover:text-amber-700 transition-colors"
+                        aria-label="경고 닫기"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )
+                )}
+              </div>
+            );
+          })()}
+
           {/* 헤더 */}
           <div className="flex items-start justify-between mb-6 pb-6 border-b border-gray-200">
             <div className="flex-1 min-w-0">
@@ -508,6 +563,27 @@ export function AnalyticsDetail() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* 분석 정확도 안내 — 모든 리포트에 공통으로 적용되는 안내, 기본은 접힌 상태 */}
+          <div className="mb-8 print:hidden">
+            <button
+              type="button"
+              onClick={() => setIsNoticeOpen((prev) => !prev)}
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <ChevronDown
+                className={`w-4 h-4 ${isNoticeOpen ? 'rotate-180' : ''}`}
+              />
+              분석본 내용이 정확하지 않나요?
+            </button>
+            {isNoticeOpen && (
+              <p className="mt-3 text-sm text-gray-600 leading-relaxed bg-gray-50 border border-gray-200 rounded-lg p-4">
+                깃털은 Git 커밋 이력을 기반으로, 사용자가 직접 작성한 파일을 분석하여 리포트를
+                생성합니다. 커밋 수가 적거나 여러 명이 함께 작업한 파일이 많을 경우, 실제 기여
+                내용과 분석 결과에 차이가 있을 수 있습니다.
+              </p>
+            )}
           </div>
 
           {/* 면접 질문 생성 */}

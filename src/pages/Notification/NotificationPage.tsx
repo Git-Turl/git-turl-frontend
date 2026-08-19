@@ -9,6 +9,7 @@ import {
 } from '../../api/notification';
 import { getMemberProfile } from '../../api/member';
 import { NotificationSettingsPanel } from './NotificationSettingsPanel';
+import { Skeleton } from '../../components/ui/skeleton';
 
 // 표시용 정규화 타입. 목록 API 와 SSE 둘 다 이 형태로 변환해서 다룬다.
 type Notification = {
@@ -356,15 +357,24 @@ export function NotificationDrawer({ isOpen, onClose }: DrawerProps) {
           {view === 'settings' ? (
             <NotificationSettingsPanel />
           ) : isLoading ? (
-            <div
-              style={{
-                padding: '60px 20px',
-                textAlign: 'center',
-                color: '#6A7282',
-                fontSize: 13,
-              }}
-            >
-              불러오는 중...
+            <div>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    borderBottom: '1px solid #F3F4F6',
+                    padding: '14px 20px',
+                    display: 'flex',
+                    gap: 12,
+                  }}
+                >
+                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                  <div style={{ flex: 1 }}>
+                    <Skeleton className="h-4 w-4/5 mb-2" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : loadError ? (
             <div

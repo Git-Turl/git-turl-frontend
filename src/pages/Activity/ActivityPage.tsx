@@ -9,6 +9,7 @@ import {
   type MemberCommentItem,
   type ReportListItem,
 } from '../../api/member';
+import { Skeleton } from '../../components/ui/skeleton';
 
 // "2026-04-08T01:40:00" → "4시간 전" 형식 상대시각.
 const relativeTime = (iso: string): string => {
@@ -167,16 +168,30 @@ export function ActivityPage() {
         </h1>
 
         {loading ? (
-          <div
-            style={{
-              padding: '40px 0',
-              textAlign: 'center',
-              color: '#9CA3AF',
-              fontSize: 13,
-            }}
-          >
-            불러오는 중...
-          </div>
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <li key={i}>
+                <div
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    gap: 12,
+                    alignItems: 'center',
+                    padding: '12px 14px',
+                    border: '1px solid #E5F3FE',
+                    borderRadius: 12,
+                    background: 'white',
+                  }}
+                >
+                  <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                  <div style={{ flex: 1 }}>
+                    <Skeleton className="h-4 w-3/5 mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
         ) : activities.length === 0 ? (
           <div
             style={{

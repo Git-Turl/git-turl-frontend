@@ -4,6 +4,7 @@ import {
   updateNotificationSettings,
   type NotificationSettings,
 } from '../../api/notification';
+import { Skeleton } from '../../components/ui/skeleton';
 
 // 두 가지 토글의 메타 정보. key 는 NotificationSettings 안의 필드명과 매칭.
 const TOGGLES: {
@@ -88,15 +89,22 @@ export function NotificationSettingsPanel() {
 
   if (isLoading || !settings) {
     return (
-      <div
-        style={{
-          padding: '60px 20px',
-          textAlign: 'center',
-          color: '#6A7282',
-          fontSize: 13,
-        }}
-      >
-        불러오는 중...
+      <div>
+        {TOGGLES.map(({ key }) => (
+          <div
+            key={key}
+            style={{
+              padding: '14px 20px',
+              borderBottom: '1px solid #F3F4F6',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-6 w-11 rounded-full" />
+          </div>
+        ))}
       </div>
     );
   }
